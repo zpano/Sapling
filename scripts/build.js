@@ -1,13 +1,53 @@
 /**
  * VocabMeld 构建脚本
- * 生成不同尺寸的图标
+ * 1. 生成不同尺寸的图标
+ * 2. 打包 segmentit 为浏览器可用的独立文件
  */
 
 const fs = require('fs');
 const path = require('path');
+const esbuild = require('esbuild');
 
-// 创建简单的 PNG 图标（使用 canvas 库或手动创建）
-// 由于不想引入额外依赖，这里创建一个简单的生成器
+// ===== 打包 segmentit =====
+async function bundleSegmentit() {
+  console.log('正在打包 segmentit...');
+
+  const vendorDir = path.join(__dirname, '..', 'vendor');
+  if (!fs.existsSync(vendorDir)) {
+    fs.mkdirSync(vendorDir, { recursive: true });
+  }
+
+  // 创建入口文件
+  const entryContent = `
+const Segment = require('segmentit');
+window.Segment = Segment;
+`;
+
+  const entryPath = path.join(__dirname, 'segmentit-entry.js');
+  fs.writeFileSync(entryPath, entryContent);
+
+  try {
+    await esbuild.build({
+      entryPoints: [entryPath],
+      bundle: true,
+      format: 'iife',
+      platform: 'browser',
+      outfile: path.join(vendorDir, 'segmentit.bundle.js'),
+      minify: false,
+      sourcemap: true,
+    });
+
+    console.log('✓ segmentit 已成功打包到 vendor/segmentit.bundle.js');
+
+    // 清理临时入口文件
+    fs.unlinkSync(entryPath);
+  } catch (error) {
+    console.error('✗ 打包 segmentit 失败:', error);
+    process.exit(1);
+  }
+}
+
+// ===== 图标生成 =====
 
 const iconSizes = [16, 32, 48, 128];
 const iconsDir = path.join(__dirname, '..', 'icons');
@@ -155,4 +195,16 @@ console.log('图标生成器已创建: icons/generate_icons.html');
 console.log('请在浏览器中打开该文件并下载生成的图标。');
 console.log('');
 console.log('或者使用现有的 SVG 图标作为基础。');
+console.log('');
 
+// ===== 主函数 =====
+async function main() {
+  await bundleSegmentit();
+  console.log('');
+  console.log('✓ 构建完成！');
+}
+
+main().catch(error => {
+  console.error('构建失败:', error);
+  process.exit(1);
+});

@@ -601,6 +601,57 @@
   }
 
   // ============ API 调用 ============
+
+  /**
+   * 对文本进行分词
+   * @param {string} text - 要分词的文本
+   * @param {string} lang - 语言类型 (Chinese/English/Japanese/Korean)
+   * @returns {Array<string>} 分词结果
+   */
+  function segmentText(text, lang) {
+    if (!text || typeof text !== 'string') return [];
+
+    // 中文分词
+    if (lang === 'Chinese') {
+      try {
+        const segment = new window.Segment();
+        segment.useDefault();
+
+        const words = segment.doSegment(text, {
+          simple: true,
+          stripPunctuation: true
+        });
+
+        // 过滤掉空字符串和纯标点符号
+        return words.filter(w => w && w.trim().length > 0 && /[\u4e00-\u9fff]/.test(w));
+      } catch (error) {
+        console.error('中文分词失败，使用降级方案:', error);
+        // 降级方案：简单的字符切分
+        return text.match(/[\u4e00-\u9fff]+/g) || [];
+      }
+    }
+
+    // 英文分词：按空格分词，去除所有标点符号
+    if (lang === 'English') {
+      return text
+        .replace(/[^\w\s]/g, ' ') // 移除所有标点符号
+        .split(/\s+/) // 按空格分词
+        .filter(w => w && w.length > 0 && /[a-zA-Z]/.test(w)); // 过滤空词和纯数字
+    }
+
+    // 日文和韩文暂时使用简单分词
+    if (lang === 'Japanese') {
+      return text.match(/[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]+/g) || [];
+    }
+
+    if (lang === 'Korean') {
+      return text.match(/[\uac00-\ud7af]+/g) || [];
+    }
+
+    // 默认按空格分词
+    return text.split(/\s+/).filter(w => w && w.trim().length > 0);
+  }
+
   async function translateText(text) {
     if (!config.apiKey || !config.apiEndpoint) {
       throw new Error('API 未配置');
@@ -615,31 +666,28 @@
     const targetLang = sourceLang === config.nativeLanguage ? config.targetLanguage : config.nativeLanguage;
     const maxReplacements = INTENSITY_CONFIG[config.intensity]?.maxPerParagraph || 8;
 
-    // 检查缓存 - 只检查有意义的词汇（排除常见停用词）
+    // 对文本进行分词并计算词数
+    const segmentedWords = segmentText(text, sourceLang);
+    const totalWordCount = segmentedWords.length;
+
+
+    // 过滤分词结果
     const stopWords = new Set(['the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'and', 'but', 'if', 'or', 'because', 'until', 'while', 'this', 'that', 'these', 'those', 'what', 'which', 'who', 'whom', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'its', 'our', 'their']);
-    
-    const words = (text.match(/\b[a-zA-Z]{5,}\b/g) || []).filter(w => !stopWords.has(w.toLowerCase()));
-    
-    // 对于中文，提取有意义的短语（2-4个字符）
-    // 注意：这里只提取用于缓存检查，实际翻译由AI决定返回哪些词汇
-    // 提取2-4个字符的短语（避免提取过多无意义的片段）
-    const chinesePhrases = [];
-    const chineseText = text.match(/[\u4e00-\u9fff]+/g) || [];
-    
-    // 从中文文本中提取2-4个字符的短语（滑动窗口，步长为1）
-    for (const phrase of chineseText) {
-      if (phrase.length >= 2) {
-        // 提取2-4个字符的短语
-        for (let len = 2; len <= Math.min(4, phrase.length); len++) {
-          for (let i = 0; i <= phrase.length - len; i++) {
-            const subPhrase = phrase.substring(i, i + len);
-            chinesePhrases.push(subPhrase);
-          }
-        }
+
+    // 过滤停用词和过短的词
+    const allWords = segmentedWords.filter(word => {
+      const lower = word.toLowerCase();
+      // 英文：过滤停用词和短词（<5字符）
+      if (/^[a-zA-Z]+$/.test(word)) {
+        return !stopWords.has(lower) && word.length >= 5;
       }
-    }
-    
-    const allWords = [...new Set([...words, ...chinesePhrases])];
+      // 中文：过滤单字（只保留2字以上）
+      if (/[\u4e00-\u9fff]/.test(word)) {
+        return word.length >= 2;
+      }
+      // 其他语言：保留
+      return true;
+    });
 
     const cached = [];
     const uncached = [];
@@ -744,33 +792,47 @@
       ? 1 
       : Math.max(maxAsyncReplacements, Math.ceil(maxReplacements * 1.5));
 
+    const aiMaxCount = maxReplacements * 2;
+
     // 异步调用 API，处理未缓存的词汇（不阻塞立即返回）
     const asyncPromise = (async () => {
       try {
         const prompt = `You are a language learning assistant. Analyze the text and select useful words to translate.
 
+## Context:
+- Text language: ${sourceLang}
+- Translation target: ${targetLang}
+- Total words in text: ${totalWordCount}
+- Words to select: ${aiTargetCount}-${aiMaxCount} words
+
 ## Rules:
-1. Select about ${aiTargetCount} words (adjust based on the text, but do not exceed ${maxReplacements * 2} words)
+1. Select ${aiTargetCount}-${aiMaxCount} words with learning value
 2. Do NOT replace: proper nouns, person/place/brand names, numbers, code, URLs, words already in the target language, English words shorter than 5 characters
 3. Prioritize words with learning value and a mix of difficulty levels
-4. Translation direction: from ${sourceLang} to ${targetLang}
-5. Translation style: respect context; keep the mix comprehensible; prefer the single most suitable meaning rather than multiple senses
+4. Translation style: respect context; keep the mix comprehensible; prefer the single most suitable meaning rather than multiple senses
 
-## CEFR levels from easiest to hardest: A1-C2
-
-## Output format:
-Return a JSON array where each item includes:
-- original: original word
-- translation: translated result
-- phonetic: pronunciation in the learning language (${config.targetLanguage})
-- difficulty: CEFR level (A1/A2/B1/B2/C1/C2); evaluate carefully
-- position: start index within the text
+## CEFR levels (easiest to hardest): A1, A2, B1, B2, C1, C2
 
 ## Text:
 ${filteredText}
 
 ## Output:
-Return only the JSON array and nothing else.`;
+Return ONLY a JSON array. Example:
+[
+  {
+    "original": "immersive",
+    "translation": "沉浸式的",
+    "phonetic": "chén jìn shì de",
+    "difficulty": "B2"
+  },
+  {
+    "original": "技术",
+    "translation": "technology",
+    "phonetic": "tek-nol-uh-jee",
+    "difficulty": "A2"
+  }
+]`;
+
 
         const response = await fetch(config.apiEndpoint, {
           method: 'POST',
@@ -784,8 +846,8 @@ Return only the JSON array and nothing else.`;
               { role: 'system', content: 'You are a professional language learning assistant. Always return valid JSON.' },
               { role: 'user', content: prompt }
             ],
-            temperature: 0.3,
-            max_tokens: 2000
+            temperature: 0,
+            max_tokens: 4096
           })
         });
 
@@ -1425,13 +1487,13 @@ Return only the JSON array and nothing else.`;
             <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
             <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
           </svg>
-          <span>Pronounce</span>
+          <span>发音</span>
         </button>
         <button class="vocabmeld-action-btn vocabmeld-btn-memorize" data-action="memorize" title="Add to memorize list">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 5v14M5 12h14"></path>
           </svg>
-          <span>Memorize</span>
+          <span>记忆</span>
         </button>
         <button class="vocabmeld-action-btn vocabmeld-btn-learned" data-action="learned" title="标记为已学会">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
