@@ -16,7 +16,7 @@ npm run build
 npm run watch
 ```
 
-**No bundler is used.** The extension uses vanilla JavaScript ES6+. Development involves direct file edits and manual extension reloading via `chrome://extensions/`.
+**No bundler is used.** The extension uses vanilla JavaScript ES6+ with native ES modules. Development involves direct file edits and manual extension reloading via `chrome://extensions/`.
 
 ## Testing
 
@@ -29,34 +29,58 @@ No testing framework is configured. Testing is manual through the Chrome extensi
 ## Architecture
 
 ```
-Background Service Worker (background.js)
-    └── Extension lifecycle, context menus, message routing
+Background Service Worker
+    js/background.js        - Extension lifecycle, context menus, message routing
 
-Content Script (content.js) - Main logic file
-    └── DOM manipulation, text replacement, tooltips, user interaction
+Content Script (Main Entry)
+    js/content.js           - Orchestrates DOM processing, translation, user interaction
 
 Services Layer (js/services/)
     ├── api-service.js      - LLM API integration (OpenAI-compatible)
     ├── cache-service.js    - 2000-word LRU cache management
-    ├── content-segmenter.js - Intelligent DOM traversal & segmentation
-    ├── processing-service.js - Translation orchestration
+    ├── content-segmenter.js - DOM traversal, text extraction, fingerprint deduplication
     └── text-replacer.js    - DOM text replacement via Range API
 
-Core Modules (js/)
-    ├── config.js           - Configuration, CEFR levels, API presets
+Core Modules (js/core/)
+    ├── config.js           - Default configuration values
     └── storage.js          - Chrome Storage API wrapper
 
-UI Components
+Config (js/config/)
+    └── constants.js        - CEFR levels, intensity settings, skip tags/classes
+
+Prompts (js/prompts/)
+    └── ai-prompts.js       - AI translation prompt templates
+
+UI Components (js/ui/)
+    ├── toast.js            - Toast notification system
+    ├── tooltip.js          - Hover tooltip for translated words
+    └── wiktionary.js       - Wiktionary dictionary lookup
+
+Utilities (js/utils/)
+    ├── language-detector.js - Language detection with segmentit
+    ├── text-processor.js    - Text processing utilities
+    └── word-filters.js      - Word filtering (CEFR, code detection, proper nouns)
+
+Vendor (vendor/)
+    └── segmentit.bundle.js  - Chinese text segmentation library
+
+UI Pages
     ├── popup.js/html/css   - Extension popup (stats, quick actions)
     └── options.js/html/css - Settings page (6-section navigation)
+
+Styles (css/)
+    ├── content.css         - Content script styles (tooltips, highlights)
+    ├── options.css         - Options page styles
+    └── popup.css           - Popup styles
 ```
 
 ## Key Technical Details
 
 - **Chrome Extension APIs**: storage (sync + local), contextMenus, activeTab, scripting, tts
-- **No ES6 modules in content script** - Chrome restrictions require inline dependencies
+- **ES6 Modules**: Content script uses native ES modules with import/export
 - **Storage**: `chrome.storage.sync` for config, `chrome.storage.local` for word cache
 - **Message passing**: Background ↔ Content script via `chrome.runtime.sendMessage()`
+- **Chinese segmentation**: Uses segmentit library for Chinese word boundary detection
 
 ## Core Algorithms
 
@@ -68,6 +92,11 @@ UI Components
 
 **LRU Cache**: 2000-word capacity, evicts least-recently-used, persists across sessions.
 
+**Translation Styles**:
+- `translation-only`: Show only translation
+- `original-translation`: Original(Translation)
+- `translation-original`: Translation(Original)
+
 ## Supported Languages
 
 - **Native**: Chinese (Simplified/Traditional), English, Japanese, Korean
@@ -77,3 +106,14 @@ UI Components
 ## Localization
 
 Uses Chrome Extension i18n API. Messages in `/_locales/{locale}/messages.json`. Default locale: zh_CN.
+
+## Key Files for Common Tasks
+
+| Task | Files |
+|------|-------|
+| Modify translation logic | `js/services/api-service.js`, `js/prompts/ai-prompts.js` |
+| Change DOM processing | `js/services/content-segmenter.js`, `js/services/text-replacer.js` |
+| Update tooltip behavior | `js/ui/tooltip.js`, `css/content.css` |
+| Modify word filtering | `js/utils/word-filters.js`, `js/config/constants.js` |
+| Change storage behavior | `js/core/storage.js`, `js/services/cache-service.js` |
+| Update popup/options UI | `js/popup.js`, `js/options.js`, corresponding HTML/CSS |

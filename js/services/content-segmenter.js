@@ -3,7 +3,8 @@
  * 智能分段页面内容，平衡处理批次大小和上下文相关性
  */
 
-import { SKIP_TAGS, SKIP_CLASSES } from '../core/config.js';
+import { SKIP_TAGS, SKIP_CLASSES } from '../config/constants.js';
+import { isCodeText } from '../utils/word-filters.js';
 
 /**
  * 内容分段器类
@@ -22,7 +23,7 @@ class ContentSegmenter {
    */
   shouldSkipNode(node) {
     if (!node) return true;
-    
+
     // 跳过非元素节点（除了文本节点）
     if (node.nodeType !== Node.ELEMENT_NODE && node.nodeType !== Node.TEXT_NODE) {
       return true;
@@ -34,7 +35,7 @@ class ContentSegmenter {
     }
 
     const element = node;
-    
+
     // 跳过特定标签
     if (SKIP_TAGS.includes(element.tagName)) {
       return true;
@@ -47,10 +48,12 @@ class ContentSegmenter {
     }
 
     // 跳过隐藏元素
-    const style = window.getComputedStyle(element);
-    if (style.display === 'none' || style.visibility === 'hidden') {
-      return true;
-    }
+    try {
+      const style = window.getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden') {
+        return true;
+      }
+    } catch (e) {}
 
     // 跳过可编辑元素
     if (element.isContentEditable) {
@@ -63,29 +66,6 @@ class ContentSegmenter {
     }
 
     return false;
-  }
-
-  /**
-   * 检查文本是否为代码
-   * @param {string} text - 文本内容
-   * @returns {boolean}
-   */
-  isCodeText(text) {
-    // 检查常见代码模式
-    const codePatterns = [
-      /^(const|let|var|function|class|import|export|return|if|else|for|while)\s/,
-      /[{}();]\s*$/,
-      /^\s*(\/\/|\/\*|\*|#)/,
-      /\w+\.\w+\(/,
-      /^\s*[\w]+:\s*[\w]+/,
-      /^[a-zA-Z_$][\w$]*\s*[=:]\s*/,
-      /^\$\s/,
-      /^>\s/,
-      /console\./,
-      /https?:\/\//
-    ];
-
-    return codePatterns.some(pattern => pattern.test(text.trim()));
   }
 
   /**
@@ -158,6 +138,14 @@ class ContentSegmenter {
   }
 
   /**
+   * 获取已处理的指纹数量
+   * @returns {number}
+   */
+  getProcessedCount() {
+    return this.processedFingerprints.size;
+  }
+
+  /**
    * 获取页面分段
    * @param {Element} root - 根元素
    * @param {object} options - 选项
@@ -199,7 +187,7 @@ class ContentSegmenter {
       }
 
       // 检查是否为代码
-      if (this.isCodeText(text)) {
+      if (isCodeText(text)) {
         continue;
       }
 
@@ -281,7 +269,7 @@ class ContentSegmenter {
             return NodeFilter.FILTER_REJECT;
           }
           const text = node.textContent.trim();
-          if (text.length > 0 && !this.isCodeText(text)) {
+          if (text.length > 0 && !isCodeText(text)) {
             return NodeFilter.FILTER_ACCEPT;
           }
           return NodeFilter.FILTER_REJECT;

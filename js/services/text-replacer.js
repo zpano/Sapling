@@ -3,139 +3,66 @@
  * 使用 Range API 精确替换文本节点
  */
 
-import { storage } from '../core/storage.js';
+import { SKIP_TAGS, SKIP_CLASSES } from '../config/constants.js';
 
 /**
  * 文本替换器类
  */
 class TextReplacer {
   constructor() {
-    this.replacedElements = new WeakSet();
+    this.config = null;
   }
 
   /**
-   * 在元素中查找并替换词汇
-   * @param {Element} element - DOM 元素
-   * @param {Array} replacements - 替换项 [{ original, translation, phonetic, difficulty, position }]
-   * @returns {number} - 替换数量
+   * 设置配置
+   * @param {object} config - 配置对象
    */
-  applyReplacements(element, replacements) {
-    if (!element || !replacements || replacements.length === 0) {
-      return 0;
-    }
-
-    let count = 0;
-    const textNodes = this.getTextNodes(element);
-
-    // 按位置排序替换项（从后往前替换，避免位置偏移）
-    const sortedReplacements = [...replacements].sort((a, b) => (b.position || 0) - (a.position || 0));
-
-    for (const replacement of sortedReplacements) {
-      const { original, translation, phonetic, difficulty } = replacement;
-      
-      // 在文本节点中查找原词
-      for (const textNode of textNodes) {
-        if (this.replaceInTextNode(textNode, original, translation, phonetic, difficulty)) {
-          count++;
-          break; // 每个替换项只替换一次
-        }
-      }
-    }
-
-    // 标记元素已处理
-    if (count > 0) {
-      element.setAttribute('data-vocabmeld-processed', 'true');
-    }
-
-    return count;
+  setConfig(config) {
+    this.config = config;
   }
 
   /**
-   * 获取元素内的所有文本节点
+   * 获取元素内的所有文本节点（带过滤）
    * @param {Element} element - DOM 元素
    * @returns {Text[]}
    */
   getTextNodes(element) {
-    const textNodes = [];
-    const walker = document.createTreeWalker(
-      element,
-      NodeFilter.SHOW_TEXT,
-      null
-    );
+    const nodes = [];
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+
+        if (parent.classList?.contains('vocabmeld-translated')) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        if (SKIP_TAGS.includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
+
+        const classList = parent.className?.toString() || '';
+        if (SKIP_CLASSES.some(cls => classList.includes(cls) && cls !== 'vocabmeld-translated')) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        try {
+          const style = window.getComputedStyle(parent);
+          if (style.display === 'none' || style.visibility === 'hidden') return NodeFilter.FILTER_REJECT;
+        } catch (e) {}
+
+        if (parent.isContentEditable) return NodeFilter.FILTER_REJECT;
+
+        const text = node.textContent.trim();
+        if (text.length === 0) return NodeFilter.FILTER_REJECT;
+
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
 
     let node;
     while (node = walker.nextNode()) {
-      if (node.textContent.trim().length > 0) {
-        textNodes.push(node);
-      }
+      nodes.push(node);
     }
-
-    return textNodes;
-  }
-
-  /**
-   * 在单个文本节点中替换词汇
-   * @param {Text} textNode - 文本节点
-   * @param {string} original - 原词
-   * @param {string} translation - 翻译
-   * @param {string} phonetic - 音标
-   * @param {string} difficulty - 难度
-   * @returns {boolean} - 是否成功替换
-   */
-  replaceInTextNode(textNode, original, translation, phonetic, difficulty) {
-    const text = textNode.textContent;
-    
-    // 创建正则表达式匹配原词（支持词边界）
-    const escapedOriginal = original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(^|[\\s，。、；：""''（）\\[\\]【】])${escapedOriginal}([\\s，。、；：""''（）\\[\\]【】]|$)`, 'i');
-    
-    const match = regex.exec(text);
-    if (!match) {
-      // 尝试不带边界的匹配（针对中文）
-      const simpleIndex = text.indexOf(original);
-      if (simpleIndex === -1) return false;
-      
-      return this.performReplacement(textNode, simpleIndex, original, translation, phonetic, difficulty);
-    }
-
-    const startIndex = match.index + match[1].length;
-    return this.performReplacement(textNode, startIndex, original, translation, phonetic, difficulty);
-  }
-
-  /**
-   * 执行实际的 DOM 替换
-   * @param {Text} textNode - 文本节点
-   * @param {number} startIndex - 起始位置
-   * @param {string} original - 原词
-   * @param {string} translation - 翻译
-   * @param {string} phonetic - 音标
-   * @param {string} difficulty - 难度
-   * @returns {boolean}
-   */
-  performReplacement(textNode, startIndex, original, translation, phonetic, difficulty) {
-    try {
-      const range = document.createRange();
-      range.setStart(textNode, startIndex);
-      range.setEnd(textNode, startIndex + original.length);
-
-      // 验证范围内容
-      const rangeContent = range.toString();
-      if (rangeContent.toLowerCase() !== original.toLowerCase()) {
-        return false;
-      }
-
-      // 创建替换元素
-      const wrapper = this.createReplacementElement(original, translation, phonetic, difficulty);
-
-      // 执行替换
-      range.deleteContents();
-      range.insertNode(wrapper);
-
-      return true;
-    } catch (error) {
-      console.error('[VocabMeld] Replacement error:', error);
-      return false;
-    }
+    return nodes;
   }
 
   /**
@@ -144,20 +71,132 @@ class TextReplacer {
    * @param {string} translation - 翻译
    * @param {string} phonetic - 音标
    * @param {string} difficulty - 难度
+   * @param {string} partOfSpeech - 词性
+   * @param {string} shortDefinition - 简短定义
+   * @param {string} sourceLang - 源语言
+   * @param {string} example - 例句
    * @returns {HTMLElement}
    */
-  createReplacementElement(original, translation, phonetic, difficulty) {
+  createReplacementElement(original, translation, phonetic, difficulty, partOfSpeech = '', shortDefinition = '', sourceLang = '', example = '') {
     const wrapper = document.createElement('span');
     wrapper.className = 'vocabmeld-translated';
     wrapper.setAttribute('data-original', original);
     wrapper.setAttribute('data-translation', translation);
     wrapper.setAttribute('data-phonetic', phonetic || '');
     wrapper.setAttribute('data-difficulty', difficulty || 'B1');
-    
-    // 显示格式: translated(original)
-    wrapper.innerHTML = `<span class="vocabmeld-word">${translation}</span><span class="vocabmeld-original">(${original})</span>`;
-    
+    wrapper.setAttribute('data-part-of-speech', partOfSpeech || '');
+    wrapper.setAttribute('data-short-definition', shortDefinition || '');
+    wrapper.setAttribute('data-source-lang', sourceLang || '');
+    wrapper.setAttribute('data-example', example || '');
+
+    const style = this.config?.translationStyle || 'original-translation';
+    wrapper.setAttribute('data-style', style);
+    let innerHTML = '';
+
+    switch (style) {
+      case 'translation-only':
+        innerHTML = `<span class="vocabmeld-word">${translation}</span>`;
+        break;
+      case 'original-translation':
+        innerHTML = `<span class="vocabmeld-original">${original}</span><span class="vocabmeld-word">(${translation})</span>`;
+        break;
+      case 'translation-original':
+      default:
+        innerHTML = `<span class="vocabmeld-word">${translation}</span><span class="vocabmeld-original">(${original})</span>`;
+        break;
+    }
+
+    wrapper.innerHTML = innerHTML;
     return wrapper;
+  }
+
+  /**
+   * 在元素中查找并替换词汇
+   * @param {Element} element - DOM 元素
+   * @param {Array} replacements - 替换项 [{ original, translation, phonetic, difficulty, partOfSpeech, shortDefinition, position, sourceLang, example }]
+   * @returns {number} - 替换数量
+   */
+  applyReplacements(element, replacements) {
+    if (!element || !replacements?.length) return 0;
+
+    let count = 0;
+
+    // 按位置排序替换项（从后往前替换，避免位置偏移）
+    const sortedReplacements = [...replacements].sort((a, b) => (b.position || 0) - (a.position || 0));
+
+    for (const replacement of sortedReplacements) {
+      const { original, translation, phonetic, difficulty, partOfSpeech = '', shortDefinition = '', sourceLang = '', example = '' } = replacement;
+
+      // 跳过原词和翻译相同的情况（英文）
+      const isEnglishLike = /^[a-zA-Z]+$/.test(original);
+      if (isEnglishLike && original.toLowerCase() === translation.toLowerCase()) {
+        continue;
+      }
+
+      const lowerOriginal = original.toLowerCase();
+
+      // 每次都重新获取文本节点（因为 DOM 可能已更改）
+      const textNodes = this.getTextNodes(element);
+
+      for (let i = 0; i < textNodes.length; i++) {
+        const textNode = textNodes[i];
+
+        if (!textNode.parentElement || !element.contains(textNode)) {
+          continue;
+        }
+
+        const text = textNode.textContent;
+        const lowerText = text.toLowerCase();
+
+        if (!lowerText.includes(lowerOriginal)) continue;
+
+        // 使用词边界正则匹配
+        const escapedOriginal = original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(^|[^\\w\\u4e00-\\u9fff])${escapedOriginal}([^\\w\\u4e00-\\u9fff]|$)`, 'i');
+
+        let match = regex.exec(text);
+        let startIndex = match ? match.index + match[1].length : text.toLowerCase().indexOf(lowerOriginal);
+
+        if (startIndex === -1) continue;
+
+        try {
+          const range = document.createRange();
+          range.setStart(textNode, startIndex);
+          range.setEnd(textNode, startIndex + original.length);
+
+          // 验证范围内容
+          const rangeContent = range.toString();
+          if (rangeContent.toLowerCase() !== lowerOriginal) continue;
+
+          // 检查是否已被替换
+          let parent = textNode.parentElement;
+          let isAlreadyReplaced = false;
+          while (parent && parent !== element) {
+            if (parent.classList?.contains('vocabmeld-translated')) {
+              isAlreadyReplaced = true;
+              break;
+            }
+            parent = parent.parentElement;
+          }
+
+          if (isAlreadyReplaced) continue;
+
+          // 创建并插入替换元素
+          const wrapper = this.createReplacementElement(original, translation, phonetic, difficulty, partOfSpeech, shortDefinition, sourceLang, example);
+          range.deleteContents();
+          range.insertNode(wrapper);
+          count++;
+
+          break; // 每个替换项只替换一次
+        } catch (e) {
+          console.error('[VocabMeld] Replacement error:', e, original);
+        }
+      }
+    }
+
+    // 标记元素已处理
+    if (count > 0) element.setAttribute('data-vocabmeld-processed', 'true');
+    return count;
   }
 
   /**
@@ -165,10 +204,7 @@ class TextReplacer {
    * @param {Element} element - 替换元素
    */
   restoreOriginal(element) {
-    if (!element.classList.contains('vocabmeld-translated')) {
-      return;
-    }
-
+    if (!element.classList?.contains('vocabmeld-translated')) return;
     const original = element.getAttribute('data-original');
     const textNode = document.createTextNode(original);
     element.parentNode.replaceChild(textNode, element);
@@ -179,60 +215,13 @@ class TextReplacer {
    * @param {Element} root - 根元素
    */
   restoreAll(root = document.body) {
-    const elements = root.querySelectorAll('.vocabmeld-translated');
-    elements.forEach(el => this.restoreOriginal(el));
-    
-    // 清除处理标记
+    root.querySelectorAll('.vocabmeld-translated').forEach(el => this.restoreOriginal(el));
     root.querySelectorAll('[data-vocabmeld-processed]').forEach(el => {
       el.removeAttribute('data-vocabmeld-processed');
     });
-  }
-
-  /**
-   * 标记词汇为已学会（加入白名单并恢复原文）
-   * @param {Element} element - 替换元素
-   * @returns {Promise<void>}
-   */
-  async markAsLearned(element) {
-    if (!element.classList.contains('vocabmeld-translated')) {
-      return;
-    }
-
-    const original = element.getAttribute('data-original');
-    const translation = element.getAttribute('data-translation');
-
-    // 添加到白名单
-    await storage.addToWhitelist({ original, word: translation });
-
-    // 恢复原文
-    this.restoreOriginal(element);
-
-    // 显示成功提示
-    this.showToast(`"${original}" 已标记为已学会`);
-  }
-
-  /**
-   * 显示提示消息
-   * @param {string} message - 消息内容
-   */
-  showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'vocabmeld-toast';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-      toast.classList.add('vocabmeld-toast-show');
-    }, 10);
-
-    setTimeout(() => {
-      toast.classList.remove('vocabmeld-toast-show');
-      setTimeout(() => toast.remove(), 300);
-    }, 2000);
   }
 }
 
 // 导出单例
 export const textReplacer = new TextReplacer();
 export default textReplacer;
-

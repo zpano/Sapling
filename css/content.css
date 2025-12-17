@@ -123,6 +123,12 @@
   padding: 0 !important;
 }
 
+.vocabmeld-tooltip .vocabmeld-tooltip-translation {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #cbd5e1 !important;
+}
+
 .vocabmeld-tooltip .vocabmeld-tooltip-badge {
   display: inline-block !important;
   padding: 2px 8px !important;
@@ -171,6 +177,10 @@
   font-size: 12px !important;
   color: #94a3b8 !important;
   margin-top: 2px !important;
+}
+
+.vocabmeld-tooltip .vocabmeld-tooltip-examples {
+  margin-top: 6px !important;
 }
 
 .vocabmeld-tooltip .vocabmeld-tooltip-dict-loading {
@@ -264,4 +274,30 @@
   .vocabmeld-translated .vocabmeld-original {
     display: none;
   }
+}
+
+/* 例句容器 */
+.vocabmeld-tooltip .vocabmeld-tooltip-examples {
+  margin-top: 8px !important;
+  padding-top: 8px !important;
+  border-top: 1px solid #334155 !important;
+}
+
+/* AI 例句标签 */
+.vocabmeld-tooltip .vocabmeld-ai-label {
+  display: inline-block !important;
+  padding: 1px 4px !important;
+  margin-right: 6px !important;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  color: white !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  border-radius: 3px !important;
+  text-transform: uppercase !important;
+  vertical-align: middle !important;
+}
+
+/* AI 例句样式 */
+.vocabmeld-tooltip .vocabmeld-tooltip-ai-example {
+  margin-top: 6px !important;
 }

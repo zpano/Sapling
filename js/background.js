@@ -3,6 +3,39 @@
  * 处理扩展级别的事件和消息
  */
 
+async function ensureOffscreenDocument() {
+  if (!chrome.offscreen?.createDocument) return false;
+
+  try {
+    const hasDocument = await chrome.offscreen.hasDocument();
+    if (hasDocument) return true;
+
+    const reason = chrome.offscreen?.Reason?.AUDIO_PLAYBACK || 'AUDIO_PLAYBACK';
+    await chrome.offscreen.createDocument({
+      url: 'offscreen.html',
+      reasons: [reason],
+      justification: 'Play pronunciation audio without being blocked by the page CSP.'
+    });
+    return true;
+  } catch (error) {
+    console.warn('[VocabMeld] Failed to ensure offscreen document:', error);
+    return false;
+  }
+}
+
+async function sendToOffscreen(message) {
+  let lastError = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await chrome.runtime.sendMessage(message);
+    } catch (error) {
+      lastError = error;
+      await new Promise(resolve => setTimeout(resolve, 60));
+    }
+  }
+  throw lastError || new Error('Failed to send message to offscreen document');
+}
+
 // 安装/更新时初始化
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('[VocabMeld] Extension installed/updated:', details.reason);
@@ -95,6 +128,26 @@ chrome.commands.onCommand.addListener((command, tab) => {
 
 // 消息处理
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // offscreen 消息不在这里处理（避免自发自收导致循环）
+  if (message?.action?.startsWith?.('offscreen')) return;
+
+  // 播放外部音频（绕过网页 CSP）
+  if (message.action === 'playAudioUrls') {
+    (async () => {
+      try {
+        const ok = await ensureOffscreenDocument();
+        if (!ok) throw new Error('Offscreen document not available');
+
+        const urls = Array.isArray(message.urls) ? message.urls : [];
+        const result = await sendToOffscreen({ action: 'offscreenPlayAudioUrls', urls });
+        sendResponse(result || { success: true });
+      } catch (error) {
+        sendResponse({ success: false, message: error?.message || String(error) });
+      }
+    })();
+    return true;
+  }
+
   // 语音合成
   if (message.action === 'speak') {
     chrome.tts.speak(message.text, {

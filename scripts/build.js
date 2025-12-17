@@ -197,9 +197,41 @@ console.log('');
 console.log('或者使用现有的 SVG 图标作为基础。');
 console.log('');
 
+// ===== 打包 content.js =====
+async function bundleContentScript() {
+  console.log('正在打包 content.js...');
+
+  const distDir = path.join(__dirname, '..', 'dist');
+  if (!fs.existsSync(distDir)) {
+    fs.mkdirSync(distDir, { recursive: true });
+  }
+
+  try {
+    await esbuild.build({
+      entryPoints: [path.join(__dirname, '..', 'js', 'content.js')],
+      bundle: true,
+      format: 'iife',
+      platform: 'browser',
+      outfile: path.join(distDir, 'content.js'),
+      minify: false,
+      sourcemap: true,
+      // 保留 IIFE 包装器以兼容 Chrome Extension
+      banner: {
+        js: '// VocabMeld Content Script (Bundled)\n',
+      },
+    });
+
+    console.log('✓ content.js 已成功打包到 dist/content.js');
+  } catch (error) {
+    console.error('✗ 打包 content.js 失败:', error);
+    process.exit(1);
+  }
+}
+
 // ===== 主函数 =====
 async function main() {
   await bundleSegmentit();
+  await bundleContentScript();
   console.log('');
   console.log('✓ 构建完成！');
 }

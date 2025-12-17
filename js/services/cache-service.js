@@ -37,6 +37,9 @@ class CacheService {
               translation: item.translation,
               phonetic: item.phonetic,
               difficulty: item.difficulty,
+              partOfSpeech: item.partOfSpeech || '',
+              shortDefinition: item.shortDefinition || '',
+              example: item.example || '',
               timestamp: item.timestamp
             });
           });
@@ -112,6 +115,9 @@ class CacheService {
       translation: data.translation,
       phonetic: data.phonetic || '',
       difficulty: data.difficulty || 'B1',
+      partOfSpeech: data.partOfSpeech || '',
+      shortDefinition: data.shortDefinition || '',
+      example: data.example || '',
       timestamp: Date.now()
     });
     
@@ -141,6 +147,9 @@ class CacheService {
         translation: item.translation,
         phonetic: item.phonetic || '',
         difficulty: item.difficulty || 'B1',
+        partOfSpeech: item.partOfSpeech || '',
+        shortDefinition: item.shortDefinition || '',
+        example: item.example || '',
         timestamp: Date.now()
       });
     }
@@ -227,6 +236,7 @@ class CacheService {
         translation: value.translation,
         phonetic: value.phonetic,
         difficulty: value.difficulty,
+        example: value.example || '',
         sourceLang,
         targetLang
       });
@@ -238,4 +248,3 @@ class CacheService {
 // 导出单例
 export const cacheService = new CacheService();
 export default cacheService;
-
