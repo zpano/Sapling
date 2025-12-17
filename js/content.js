@@ -869,6 +869,8 @@ Select ${aiTargetCount}-${aiMaxCount} words with high learning value from the pr
 ## Translation Context:
 - Source language: ${sourceLang}
 - Target language: ${targetLang}
+- User's native language: ${config.nativeLanguage}
+- User's learning language: ${config.targetLanguage}
 
 ## Selection Rules (MUST FOLLOW):
 1. Select ONLY ${aiTargetCount}-${aiMaxCount} words total
@@ -876,9 +878,17 @@ Select ${aiTargetCount}-${aiMaxCount} words with high learning value from the pr
 3. SKIP: words already in the target language
 4. Prioritize: common useful vocabulary with mixed difficulty levels
 5. Translation style: context-aware, single best meaning (not multiple definitions)
+6. **CRITICAL**: The "phonetic" field MUST be the pronunciation of the LEARNING LANGUAGE (${config.targetLanguage}), NOT the source text language
 
 ## CEFR Difficulty Levels:
 A1 → A2 → B1 → B2 → C1 → C2
+
+## Phonetic Format Rules:
+- For English: use simplified pronunciation like "in-spuh-rey-shuhn" or IPA
+- For Chinese: use pinyin with tones like "líng gǎn"
+- For Japanese: use romaji like "ko-n-ni-chi-wa"
+- For Korean: use romanization like "an-nyeong"
+- **The phonetic MUST match the learning language (${config.targetLanguage}), not the original text**
 
 ## Example Output (JSON ONLY):
 [
@@ -1096,14 +1106,22 @@ A1 → A2 → B1 → B2 → C1 → C2
 ## Rules:
 1. Translate every provided word; do not skip any
 2. If a word is in ${sourceLang}, translate it to ${targetLang}; otherwise translate it the other way
+3. **CRITICAL**: The "phonetic" field MUST be the pronunciation of the LEARNING LANGUAGE (${config.targetLanguage}), NOT the original word
 
 ## CEFR levels from easiest to hardest: A1-C2
+
+## Phonetic Format Rules:
+- For English: use simplified pronunciation like "in-spuh-rey-shuhn" or IPA
+- For Chinese: use pinyin with tones like "líng gǎn"
+- For Japanese: use romaji like "ko-n-ni-chi-wa"
+- For Korean: use romanization like "an-nyeong"
+- **The phonetic MUST match the learning language (${config.targetLanguage}), not the original text**
 
 ## Output format:
 Return a JSON array where each item includes:
 - original: original word
 - translation: translated result
-- phonetic: pronunciation in the learning language (${config.targetLanguage})
+- phonetic: pronunciation of the LEARNING LANGUAGE word (${config.targetLanguage})
 - difficulty: CEFR level (A1/A2/B1/B2/C1/C2)
 
 ## Words to translate:
@@ -1500,7 +1518,7 @@ Return only the JSON array and nothing else.`;
     document.body.appendChild(tooltip);
   }
 
-  function showTooltip(element) {
+  async function showTooltip(element) {
     if (!tooltip || !element.classList?.contains('vocabmeld-translated')) return;
 
     // 取消任何待处理的隐藏操作
@@ -1515,8 +1533,9 @@ Return only the JSON array and nothing else.`;
     const phonetic = element.getAttribute('data-phonetic');
     const difficulty = element.getAttribute('data-difficulty') || '';
 
-    const originalLang = original ? detectLanguage(original) : '';
-    const translationLang = translation ? detectLanguage(translation) : '';
+    // FIXED: Await detectLanguage since it can be async
+    const originalLang = original ? await detectLanguage(original) : '';
+    const translationLang = translation ? await detectLanguage(translation) : '';
 
     let dictionaryWord = '';
     let dictionaryLang = '';
@@ -1813,8 +1832,9 @@ Return only the JSON array and nothing else.`;
     const original = element.getAttribute('data-original') || '';
     const translation = element.getAttribute('data-translation') || '';
 
-    const originalLang = original ? detectLanguage(original) : '';
-    const translationLang = translation ? detectLanguage(translation) : '';
+    // FIXED: Await detectLanguage since it can be async
+    const originalLang = original ? await detectLanguage(original) : '';
+    const translationLang = translation ? await detectLanguage(translation) : '';
 
     let word = '';
     let lang = '';
@@ -1827,7 +1847,7 @@ Return only the JSON array and nothing else.`;
       lang = 'en';
     } else {
       word = translation || original;
-      lang = detectLanguage(word);
+      lang = await detectLanguage(word);
     }
 
     if (!word) return;
