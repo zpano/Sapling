@@ -114,7 +114,7 @@ class ApiService {
 
     // 分词
     const segmentedWords = segmentText(text, sourceLang);
-    const allWords = filterWords(segmentedWords);
+    const allWords = filterWords(segmentedWords).filter(word => !isNonLearningWord(word));
 
     // 检查缓存
     const cached = [];
@@ -192,23 +192,25 @@ class ApiService {
     // 构建只包含未缓存词汇的文本
     const filteredText = reconstructTextWithWords(text, uncached);
 
-    const cacheSatisfied = immediateResults.length >= maxReplacements;
     const textTooShort = filteredText.trim().length < 50;
+
+    // 缓存已经满足本段落的替换数量时，不再发起异步 API 请求（避免“已缓存仍长时间高亮处理中”）。
+    const remainingSlots = maxReplacements - immediateResults.length;
+    if (remainingSlots <= 0) {
+      return { immediate: immediateResults, async: null };
+    }
 
     if (textTooShort) {
       return { immediate: immediateResults, async: null };
     }
 
-    const remainingSlots = maxReplacements - immediateResults.length;
-    const maxAsyncReplacements = cacheSatisfied ? 1 : remainingSlots;
+    const maxAsyncReplacements = remainingSlots;
 
     if (maxAsyncReplacements <= 0) {
       return { immediate: immediateResults, async: null };
     }
 
-    const aiTargetCount = cacheSatisfied
-      ? 1
-      : Math.max(maxAsyncReplacements, Math.ceil(maxReplacements * 1.5));
+    const aiTargetCount = Math.max(maxAsyncReplacements, Math.ceil(maxReplacements * 1.5));
     const aiMaxCount = maxReplacements * 2;
 
     // 异步调用 API

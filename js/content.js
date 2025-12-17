@@ -12,6 +12,7 @@ let config = null;
 let isProcessing = false;
 let wordCache = new Map();
 const tooltipManager = new TooltipManager();
+let processingGeneration = 0;
 
 // ============ 配置加载 ============
 async function loadConfig() {
@@ -215,6 +216,10 @@ function restoreOriginal(element) {
 }
 
 function restoreAll() {
+  processingGeneration++;
+  document.querySelectorAll('.vocabmeld-processing').forEach(el => {
+    el.classList.remove('vocabmeld-processing');
+  });
   textReplacer.restoreAll();
   contentSegmenter.clearProcessed();
 }
@@ -385,6 +390,7 @@ async function processPage(viewportOnly = false) {
     await loadWordCache();
   }
 
+  const runGeneration = ++processingGeneration;
   isProcessing = true;
   let processed = 0, errors = 0;
 
@@ -423,9 +429,12 @@ async function processPage(viewportOnly = false) {
     async function processSegment(segment) {
       const el = segment.element;
       try {
-        el.classList.add('vocabmeld-processing');
-
         const result = await translateText(segment.filteredText);
+
+        if (runGeneration !== processingGeneration) {
+          el.classList.remove('vocabmeld-processing');
+          return { count: 0, error: false, aborted: true };
+        }
 
         // 先应用缓存结果（立即显示）
         let immediateCount = 0;
@@ -437,8 +446,16 @@ async function processPage(viewportOnly = false) {
 
         // 如果有异步结果，等待并更新
         if (result.async) {
+          // 只有在没有立即替换结果时，才显示“处理中”高亮，避免缓存命中时出现长时间绿色背景。
+          if (immediateCount === 0) {
+            el.classList.add('vocabmeld-processing');
+          } else {
+            el.classList.remove('vocabmeld-processing');
+          }
+
           result.async.then(async (asyncReplacements) => {
             try {
+              if (runGeneration !== processingGeneration) return;
               if (asyncReplacements?.length) {
                 // 获取已替换的词汇，避免重复
                 const alreadyReplaced = new Set();
@@ -479,6 +496,7 @@ async function processPage(viewportOnly = false) {
 
     // 分批并行处理
     for (let i = 0; i < validSegments.length; i += MAX_CONCURRENT) {
+      if (runGeneration !== processingGeneration) break;
       const batch = validSegments.slice(i, i + MAX_CONCURRENT);
       const results = await Promise.all(batch.map(processSegment));
 
@@ -622,8 +640,12 @@ function setupEventListeners() {
       }
     }
     if (message.action === 'getStatus') {
+      const hasTranslations = !!document.querySelector('.vocabmeld-translated');
+      const hasProcessedMarkers = !!document.querySelector('[data-vocabmeld-processed]');
       sendResponse({
         processed: contentSegmenter.getProcessedCount(),
+        hasTranslations,
+        hasProcessedMarkers,
         isProcessing,
         enabled: config?.enabled
       });

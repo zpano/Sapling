@@ -8,7 +8,7 @@
     "description": "扩展描述"
   },
   "commandToggleTranslation": {
-    "message": "切换翻译处理",
+    "message": "切换处理/还原当前页面",
     "description": "快捷键描述"
   },
   "popupTitle": {

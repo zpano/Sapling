@@ -8,7 +8,7 @@
     "description": "Extension description"
   },
   "commandToggleTranslation": {
-    "message": "Toggle translation processing",
+    "message": "Toggle process/restore current page",
     "description": "Keyboard shortcut description"
   },
   "popupTitle": {

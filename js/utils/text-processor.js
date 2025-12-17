@@ -14,8 +14,14 @@ import { STOP_WORDS } from '../config/constants.js';
 export function segmentText(text, lang) {
   if (!text || typeof text !== 'string') return [];
 
+  const normalizedLang = (lang || '').toString();
+  const isChineseLang = normalizedLang === 'Chinese' || normalizedLang.startsWith('zh');
+  const isEnglishLang = normalizedLang === 'English' || normalizedLang === 'en';
+  const isJapaneseLang = normalizedLang === 'Japanese' || normalizedLang === 'ja';
+  const isKoreanLang = normalizedLang === 'Korean' || normalizedLang === 'ko';
+
   // 中文分词
-  if (lang === 'Chinese') {
+  if (isChineseLang) {
     try {
       const segment = new window.Segment();
       segment.useDefault();
@@ -35,7 +41,7 @@ export function segmentText(text, lang) {
   }
 
   // 英文分词：按空格分词，去除所有标点符号
-  if (lang === 'English') {
+  if (isEnglishLang) {
     return text
       .replace(/[^\w\s]/g, ' ') // 移除所有标点符号
       .split(/\s+/) // 按空格分词
@@ -43,11 +49,11 @@ export function segmentText(text, lang) {
   }
 
   // 日文和韩文暂时使用简单分词
-  if (lang === 'Japanese') {
+  if (isJapaneseLang) {
     return text.match(/[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]+/g) || [];
   }
 
-  if (lang === 'Korean') {
+  if (isKoreanLang) {
     return text.match(/[\uac00-\ud7af]+/g) || [];
   }
 

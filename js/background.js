@@ -36,6 +36,9 @@ async function sendToOffscreen(message) {
   throw lastError || new Error('Failed to send message to offscreen document');
 }
 
+const MENU_ID_ADD_MEMORIZE = 'vocabmeld-add-memorize';
+const MENU_ID_TOGGLE_PAGE = 'vocabmeld-process-page';
+
 // 安装/更新时初始化
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('[VocabMeld] Extension installed/updated:', details.reason);
@@ -72,26 +75,87 @@ chrome.runtime.onInstalled.addListener((details) => {
   createContextMenus();
 });
 
+function isPageProcessed(status) {
+  if (!status) return false;
+  return Boolean(
+    status.hasTranslations ||
+    status.hasProcessedMarkers ||
+    (Number(status.processed) || 0) > 0
+  );
+}
+
+function getTogglePageMenuTitle(processed) {
+  return processed ? '还原当前页面' : '处理当前页面';
+}
+
+async function getTabStatus(tabId) {
+  if (!tabId) return null;
+  try {
+    return await chrome.tabs.sendMessage(tabId, { action: 'getStatus' });
+  } catch {
+    return null;
+  }
+}
+
+function updateTogglePageMenuTitle(tabId, processed) {
+  chrome.contextMenus.update(
+    MENU_ID_TOGGLE_PAGE,
+    { title: getTogglePageMenuTitle(processed) },
+    () => {
+      chrome.contextMenus.refresh?.();
+    }
+  );
+}
+
+async function refreshTogglePageMenuTitle(tabId) {
+  const status = await getTabStatus(tabId);
+  updateTogglePageMenuTitle(tabId, isPageProcessed(status));
+}
+
+async function togglePageProcessing(tabId) {
+  const status = await getTabStatus(tabId);
+  const processed = isPageProcessed(status);
+  const action = processed ? 'restorePage' : 'processPage';
+  let ok = true;
+  try {
+    await chrome.tabs.sendMessage(tabId, { action });
+  } catch {
+    ok = false;
+  }
+
+  // Best-effort update the menu title immediately (actual page state may update shortly after).
+  updateTogglePageMenuTitle(tabId, ok ? !processed : false);
+  return { success: ok, processedBefore: processed, processedAfter: ok ? !processed : processed };
+}
+
 // 创建右键菜单
 function createContextMenus() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
-      id: 'vocabmeld-add-memorize',
+      id: MENU_ID_ADD_MEMORIZE,
       title: '添加到需记忆列表',
       contexts: ['selection']
     });
     
-    chrome.contextMenus.create({
-      id: 'vocabmeld-process-page',
-      title: '处理当前页面',
+  chrome.contextMenus.create({
+      id: MENU_ID_TOGGLE_PAGE,
+      title: getTogglePageMenuTitle(false),
       contexts: ['page']
     });
   });
 }
 
+if (chrome.contextMenus?.onShown?.addListener) {
+  chrome.contextMenus.onShown.addListener((info, tab) => {
+    if (!tab?.id) return;
+    if (!info?.contexts?.includes?.('page')) return;
+    refreshTogglePageMenuTitle(tab.id);
+  });
+}
+
 // 右键菜单点击处理
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === 'vocabmeld-add-memorize' && info.selectionText) {
+  if (info.menuItemId === MENU_ID_ADD_MEMORIZE && info.selectionText) {
     const word = info.selectionText.trim();
     if (word && word.length < 50) {
       chrome.storage.sync.get('memorizeList', (result) => {
@@ -112,10 +176,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     }
   }
   
-  if (info.menuItemId === 'vocabmeld-process-page') {
-    if (tab?.id) {
-      chrome.tabs.sendMessage(tab.id, { action: 'processPage' }).catch(() => {});
-    }
+  if (info.menuItemId === MENU_ID_TOGGLE_PAGE && tab?.id) {
+    togglePageProcessing(tab.id).catch(() => {});
   }
 });
 
@@ -123,13 +185,33 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 chrome.commands.onCommand.addListener((command, tab) => {
   if (command === 'toggle-translation') {
     if (tab?.id) {
-      chrome.tabs.sendMessage(tab.id, { action: 'processPage' }).catch(() => {});
+      togglePageProcessing(tab.id).catch(() => {});
     }
   }
 });
 
 // 消息处理
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.action === 'togglePageProcessing') {
+    (async () => {
+      const tabId = message.tabId;
+      if (!tabId) return sendResponse({ success: false, message: 'No tabId provided' });
+      const result = await togglePageProcessing(tabId);
+      sendResponse(result);
+    })();
+    return true;
+  }
+
+  if (message?.action === 'refreshTogglePageMenuTitle') {
+    (async () => {
+      const tabId = message.tabId;
+      if (!tabId) return sendResponse({ success: false, message: 'No tabId provided' });
+      await refreshTogglePageMenuTitle(tabId);
+      sendResponse({ success: true });
+    })();
+    return true;
+  }
+
   // offscreen 消息不在这里处理（避免自发自收导致循环）
   if (message?.action?.startsWith?.('offscreen')) return;
 
@@ -277,6 +359,20 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url?.startsWith('http')) {
     // 可以在这里做额外的初始化
   }
+
+  // Keep context menu title in sync with the active tab, even on browsers without `contextMenus.onShown`.
+  if (!tab?.active) return;
+  if (changeInfo.status === 'loading') {
+    updateTogglePageMenuTitle(tabId, false);
+  }
+  if (changeInfo.status === 'complete') {
+    refreshTogglePageMenuTitle(tabId);
+  }
+});
+
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  if (!activeInfo?.tabId) return;
+  refreshTogglePageMenuTitle(activeInfo.tabId);
 });
 
 console.log('[VocabMeld] Background script loaded');
