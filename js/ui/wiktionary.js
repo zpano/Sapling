@@ -40,18 +40,12 @@ function tryExtractFileTitleFromUrl(url, langCode) {
   }
 }
 
-async function resolveFileTitleToDirectUrl(fileTitle, langCode) {
+function fileTitleToSpecialFilePathUrl(fileTitle, langCode) {
   if (!fileTitle) return '';
-
-  const url = `https://${langCode}.wiktionary.org/w/api.php?action=query&titles=${encodeURIComponent(fileTitle)}&prop=imageinfo&iiprop=url&format=json&origin=*`;
-  const response = await fetch(url);
-  const data = await response.json();
-  const pages = data?.query?.pages;
-  if (!pages) return '';
-
-  const firstPage = pages[Object.keys(pages)[0]];
-  const direct = firstPage?.imageinfo?.[0]?.url;
-  return typeof direct === 'string' ? direct : '';
+  // MediaWiki: Special:FilePath expects a filename (without "File:" prefix).
+  const filename = String(fileTitle).replace(/^File:/i, '').trim();
+  if (!filename) return '';
+  return `https://${langCode}.wiktionary.org/wiki/Special:FilePath/${encodeURIComponent(filename)}`;
 }
 
 function getLanguageScopeRoot(doc, langCode) {
@@ -141,12 +135,8 @@ async function resolveAudioUrls(candidateUrls, langCode) {
 
     const fileTitle = tryExtractFileTitleFromUrl(url, langCode);
     if (fileTitle) {
-      try {
-        const direct = await resolveFileTitleToDirectUrl(fileTitle, langCode);
-        if (direct) resolved.push(direct);
-      } catch {
-        // ignore
-      }
+      const filePathUrl = fileTitleToSpecialFilePathUrl(fileTitle, langCode);
+      if (filePathUrl) resolved.push(filePathUrl);
     }
   }
 

@@ -81,7 +81,7 @@ Styles (css/)
 - **ES6 Modules**: Content script uses native ES modules with import/export
 - **Storage**: `chrome.storage.sync` for config, `chrome.storage.local` for word cache
 - **Message passing**: Background ↔ Content script via `chrome.runtime.sendMessage()`
-- **Pronunciation audio**: Can play audio via Wiktionary, Youdao (`https://dict.youdao.com/dictvoice?audio={word}&type={1/2}`; English only), or Google Translate TTS (`https://translate.google.com/translate_tts?ie=UTF-8&q={text}&tl={lang}&client=tw-ob`), routed through an offscreen document to bypass page CSP
+- **Pronunciation audio**: Can play audio via Wiktionary, Youdao (`https://dict.youdao.com/dictvoice?audio={word}&type={1/2}`; English only), or Google Translate TTS (`https://translate.google.com/translate_tts?ie=UTF-8&q={text}&tl={lang}&client=tw-ob`), routed through an offscreen document to bypass page CSP (Wiktionary File: links are converted to `Special:FilePath` without extra API lookups)
 - **Chinese segmentation**: Uses segmentit library for Chinese word boundary detection
 
 ## Core Algorithms
