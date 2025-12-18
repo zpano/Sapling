@@ -723,6 +723,8 @@ function setupEventListeners() {
 
   // 处理 tooltip 按钮点击事件
   document.addEventListener('click', async (e) => {
+    if (e.button !== 0) return;
+
     const actionBtn = e.target.closest('.vocabmeld-action-btn');
     const currentElement = tooltipManager.getCurrentElement();
 
@@ -750,7 +752,19 @@ function setupEventListeners() {
           showToast(`"${original}" 已标记为已学会`);
           break;
       }
+
+      return;
     }
+
+    // 左键点击被替换的单词：直接发音（无需点击 tooltip 的发音按钮）
+    const clickedWord = e.target.closest('.vocabmeld-translated');
+    if (!clickedWord) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
+    // 避免干扰页面交互元素（链接/表单控件等）
+    if (clickedWord.closest('a[href], button, input, textarea, select, label, summary')) return;
+
+    await tooltipManager.playAudio(clickedWord);
   });
 
   // 滚动处理
