@@ -17,9 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const CACHE_MAX_SIZE_LIMIT = 8192;
   const CACHE_MIN_SIZE_LIMIT = 2000;
   const DEFAULT_CONCURRENCY_LIMIT = 5;
-  const DEFAULT_LENGTH_LIMIT = 20;
   const CONCURRENCY_LIMIT_MAX = 20;
-  const LENGTH_LIMIT_MAX = 200;
 
   function normalizeCacheMaxSize(value) {
     const parsed = Number.parseInt(String(value), 10);
@@ -35,10 +33,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function normalizeConcurrencyLimit(value) {
     return normalizePositiveInt(value, DEFAULT_CONCURRENCY_LIMIT, { min: 1, max: CONCURRENCY_LIMIT_MAX });
-  }
-
-  function normalizeLengthLimit(value) {
-    return normalizePositiveInt(value, DEFAULT_LENGTH_LIMIT, { min: 1, max: LENGTH_LIMIT_MAX });
   }
 
   // 防抖保存函数
@@ -80,7 +74,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 高级设置
     concurrencyLimit: document.getElementById('concurrencyLimit'),
-    lengthLimit: document.getElementById('lengthLimit'),
 
     // 站点规则
     blacklistInput: document.getElementById('blacklistInput'),
@@ -177,7 +170,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // 高级设置
       if (elements.concurrencyLimit) elements.concurrencyLimit.value = String(normalizeConcurrencyLimit(result.concurrencyLimit));
-      if (elements.lengthLimit) elements.lengthLimit.value = String(normalizeLengthLimit(result.lengthLimit));
 
       // 缓存容量
       const cacheMaxSize = normalizeCacheMaxSize(result.cacheMaxSize);
@@ -430,9 +422,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderCacheStatus(lastKnownCacheSize, normalizedCacheMaxSize);
 
     const normalizedConcurrencyLimit = normalizeConcurrencyLimit(elements.concurrencyLimit?.value);
-    const normalizedLengthLimit = normalizeLengthLimit(elements.lengthLimit?.value);
     if (elements.concurrencyLimit) elements.concurrencyLimit.value = String(normalizedConcurrencyLimit);
-    if (elements.lengthLimit) elements.lengthLimit.value = String(normalizedLengthLimit);
 
     const settings = {
       apiEndpoint: elements.apiEndpoint.value.trim(),
@@ -450,8 +440,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       blacklist: elements.blacklistInput.value.split('\n').filter(s => s.trim()),
       whitelist: elements.whitelistInput.value.split('\n').filter(s => s.trim()),
       cacheMaxSize: normalizedCacheMaxSize,
-      concurrencyLimit: normalizedConcurrencyLimit,
-      lengthLimit: normalizedLengthLimit
+      concurrencyLimit: normalizedConcurrencyLimit
     };
 
     try {
@@ -506,8 +495,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     const numberInputs = [
-      elements.concurrencyLimit,
-      elements.lengthLimit
+      elements.concurrencyLimit
     ].filter(Boolean);
 
     numberInputs.forEach(input => {

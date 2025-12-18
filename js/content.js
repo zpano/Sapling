@@ -1,7 +1,8 @@
 import { CEFR_LEVELS, INTENSITY_CONFIG, SKIP_TAGS, SKIP_CLASSES } from './config/constants.js';
-import { CACHE_CONFIG, normalizeCacheMaxSize, normalizeConcurrencyLimit, normalizeLengthLimit } from './core/config.js';
+import { CACHE_CONFIG, normalizeCacheMaxSize, normalizeConcurrencyLimit } from './core/config.js';
 import { initLanguageDetector, detectLanguage } from './utils/language-detector.js';
 import { isDifficultyCompatible, isCodeText, isNonLearningWord } from './utils/word-filters.js';
+import { isInAllowedContentEditableRegion } from './utils/dom-utils.js';
 import { TooltipManager } from './ui/tooltip.js';
 import { showToast } from './ui/toast.js';
 import { apiService } from './services/api-service.js';
@@ -19,54 +20,96 @@ let processingGeneration = 0;
 // ============ 配置加载 ============
 async function loadConfig() {
   return new Promise((resolve) => {
-    chrome.storage.sync.get(null, (result) => {
+    const applyConfig = (result = {}) => {
+      const safeResult = result || {};
       config = {
-        apiEndpoint: result.apiEndpoint || 'https://api.deepseek.com/chat/completions',
-        apiKey: result.apiKey || '',
-        modelName: result.modelName || 'deepseek-chat',
-        nativeLanguage: result.nativeLanguage || 'zh-CN',
-        targetLanguage: result.targetLanguage || 'en',
-        difficultyLevel: result.difficultyLevel || 'B1',
-        intensity: result.intensity || 'medium',
-        autoProcess: result.autoProcess ?? false,
-        showPhonetic: result.showPhonetic ?? true,
-        pronunciationProvider: result.pronunciationProvider || 'wiktionary',
-        youdaoPronunciationType: Number(result.youdaoPronunciationType) === 1 ? 1 : 2,
-        translationStyle: result.translationStyle || 'original-translation',
-        cacheMaxSize: normalizeCacheMaxSize(result.cacheMaxSize, CACHE_CONFIG.maxSize),
-        concurrencyLimit: normalizeConcurrencyLimit(result.concurrencyLimit),
-        lengthLimit: normalizeLengthLimit(result.lengthLimit),
-        enabled: result.enabled ?? true,
-        blacklist: result.blacklist || [],
-        whitelist: result.whitelist || [],
-        learnedWords: result.learnedWords || [],
-        memorizeList: result.memorizeList || []
+        apiEndpoint: safeResult.apiEndpoint || 'https://api.deepseek.com/chat/completions',
+        apiKey: safeResult.apiKey || '',
+        modelName: safeResult.modelName || 'deepseek-chat',
+        nativeLanguage: safeResult.nativeLanguage || 'zh-CN',
+        targetLanguage: safeResult.targetLanguage || 'en',
+        difficultyLevel: safeResult.difficultyLevel || 'B1',
+        intensity: safeResult.intensity || 'medium',
+        autoProcess: safeResult.autoProcess ?? false,
+        showPhonetic: safeResult.showPhonetic ?? true,
+        pronunciationProvider: safeResult.pronunciationProvider || 'wiktionary',
+        youdaoPronunciationType: Number(safeResult.youdaoPronunciationType) === 1 ? 1 : 2,
+        translationStyle: safeResult.translationStyle || 'original-translation',
+        cacheMaxSize: normalizeCacheMaxSize(safeResult.cacheMaxSize, CACHE_CONFIG.maxSize),
+        concurrencyLimit: normalizeConcurrencyLimit(safeResult.concurrencyLimit),
+        enabled: safeResult.enabled ?? true,
+        blacklist: safeResult.blacklist || [],
+        whitelist: safeResult.whitelist || [],
+        learnedWords: safeResult.learnedWords || [],
+        memorizeList: safeResult.memorizeList || []
       };
       tooltipManager.setConfig(config);
       textReplacer.setConfig(config);
       resolve(config);
-    });
+    };
+
+    if (!globalThis.chrome?.storage?.sync?.get) {
+      applyConfig({});
+      return;
+    }
+
+    try {
+      chrome.storage.sync.get(null, (result) => {
+        const lastError = chrome?.runtime?.lastError;
+        if (lastError) {
+          if (!isContextInvalidated(lastError)) {
+            console.warn('[VocabMeld] Config read failed:', lastError);
+          }
+          return applyConfig(config || {});
+        }
+        applyConfig(result);
+      });
+    } catch (error) {
+      if (!isContextInvalidated(error)) {
+        console.warn('[VocabMeld] Config read threw:', error);
+      }
+      applyConfig(config || {});
+    }
   });
 }
 
 async function loadWordCache() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(WORD_CACHE_STORAGE_KEY, (result) => {
-      const cached = result[WORD_CACHE_STORAGE_KEY];
-      if (cached && Array.isArray(cached)) {
-        cached.forEach(item => {
-          wordCache.set(item.key, {
-            translation: item.translation,
-            phonetic: item.phonetic,
-            difficulty: item.difficulty,
-            partOfSpeech: item.partOfSpeech || '',
-            shortDefinition: item.shortDefinition || '',
-            example: item.example || ''
+    if (!globalThis.chrome?.storage?.local?.get) {
+      return resolve(wordCache);
+    }
+
+    try {
+      chrome.storage.local.get(WORD_CACHE_STORAGE_KEY, (result) => {
+        const lastError = chrome?.runtime?.lastError;
+        if (lastError) {
+          if (!isContextInvalidated(lastError)) {
+            console.warn('[VocabMeld] Cache read failed:', lastError);
+          }
+          return resolve(wordCache);
+        }
+
+        const cached = result?.[WORD_CACHE_STORAGE_KEY];
+        if (cached && Array.isArray(cached)) {
+          cached.forEach(item => {
+            wordCache.set(item.key, {
+              translation: item.translation,
+              phonetic: item.phonetic,
+              difficulty: item.difficulty,
+              partOfSpeech: item.partOfSpeech || '',
+              shortDefinition: item.shortDefinition || '',
+              example: item.example || ''
+            });
           });
-        });
+        }
+        resolve(wordCache);
+      });
+    } catch (error) {
+      if (!isContextInvalidated(error)) {
+        console.warn('[VocabMeld] Cache read threw:', error);
       }
       resolve(wordCache);
-    });
+    }
   });
 }
 
@@ -76,16 +119,27 @@ async function saveWordCache() {
     data.push({ key, ...value });
   }
   return new Promise((resolve, reject) => {
-    chrome.storage.local.set({ [WORD_CACHE_STORAGE_KEY]: data }, () => {
-      if (chrome.runtime.lastError) {
-        if (isContextInvalidated(chrome.runtime.lastError)) {
-          return resolve();
+    if (!globalThis.chrome?.storage?.local?.set) return resolve();
+
+    try {
+      chrome.storage.local.set({ [WORD_CACHE_STORAGE_KEY]: data }, () => {
+        const lastError = chrome?.runtime?.lastError;
+        if (lastError) {
+          if (isContextInvalidated(lastError)) {
+            return resolve();
+          }
+          console.error('[VocabMeld] Failed to save cache:', lastError);
+          return reject(lastError);
         }
-        console.error('[VocabMeld] Failed to save cache:', chrome.runtime.lastError);
-        return reject(chrome.runtime.lastError);
+        resolve();
+      });
+    } catch (error) {
+      if (isContextInvalidated(error)) {
+        return resolve();
       }
-      resolve();
-    });
+      console.error('[VocabMeld] Failed to save cache (threw):', error);
+      reject(error);
+    }
   });
 }
 
@@ -97,7 +151,15 @@ let wordCacheClearInFlight = null;
 
 function removeWordCacheFromStorage() {
   return new Promise((resolve) => {
-    chrome.storage.local.remove(WORD_CACHE_STORAGE_KEY, () => resolve());
+    if (!globalThis.chrome?.storage?.local?.remove) return resolve();
+    try {
+      chrome.storage.local.remove(WORD_CACHE_STORAGE_KEY, () => resolve());
+    } catch (error) {
+      if (!isContextInvalidated(error)) {
+        console.warn('[VocabMeld] Cache remove threw:', error);
+      }
+      resolve();
+    }
   });
 }
 
@@ -161,37 +223,57 @@ function isContextInvalidated(error) {
 
 async function updateStats(stats) {
   return new Promise((resolve) => {
-    chrome.storage.sync.get(['totalWords', 'todayWords', 'lastResetDate', 'cacheHits', 'cacheMisses'], (current) => {
-      if (chrome.runtime.lastError) {
-        if (!isContextInvalidated(chrome.runtime.lastError)) {
-          console.warn('[VocabMeld] Stats read failed:', chrome.runtime.lastError);
-        }
-        return resolve(null);
-      }
+    if (!globalThis.chrome?.storage?.sync?.get || !globalThis.chrome?.storage?.sync?.set) {
+      return resolve(null);
+    }
 
-      const today = new Date().toISOString().split('T')[0];
-      if (current.lastResetDate !== today) {
-        current.todayWords = 0;
-        current.lastResetDate = today;
-      }
-      const updated = {
-        totalWords: (current.totalWords || 0) + (stats.newWords || 0),
-        todayWords: (current.todayWords || 0) + (stats.newWords || 0),
-        lastResetDate: today,
-        cacheHits: (current.cacheHits || 0) + (stats.cacheHits || 0),
-        cacheMisses: (current.cacheMisses || 0) + (stats.cacheMisses || 0)
-      };
-
-      chrome.storage.sync.set(updated, () => {
-        if (chrome.runtime.lastError) {
-          if (!isContextInvalidated(chrome.runtime.lastError)) {
-            console.warn('[VocabMeld] Stats write failed:', chrome.runtime.lastError);
+    try {
+      chrome.storage.sync.get(['totalWords', 'todayWords', 'lastResetDate', 'cacheHits', 'cacheMisses'], (current) => {
+        const readError = chrome?.runtime?.lastError;
+        if (readError) {
+          if (!isContextInvalidated(readError)) {
+            console.warn('[VocabMeld] Stats read failed:', readError);
           }
           return resolve(null);
         }
-        resolve(updated);
+
+        const today = new Date().toISOString().split('T')[0];
+        if (current.lastResetDate !== today) {
+          current.todayWords = 0;
+          current.lastResetDate = today;
+        }
+        const updated = {
+          totalWords: (current.totalWords || 0) + (stats.newWords || 0),
+          todayWords: (current.todayWords || 0) + (stats.newWords || 0),
+          lastResetDate: today,
+          cacheHits: (current.cacheHits || 0) + (stats.cacheHits || 0),
+          cacheMisses: (current.cacheMisses || 0) + (stats.cacheMisses || 0)
+        };
+
+        try {
+          chrome.storage.sync.set(updated, () => {
+            const writeError = chrome?.runtime?.lastError;
+            if (writeError) {
+              if (!isContextInvalidated(writeError)) {
+                console.warn('[VocabMeld] Stats write failed:', writeError);
+              }
+              return resolve(null);
+            }
+            resolve(updated);
+          });
+        } catch (error) {
+          if (!isContextInvalidated(error)) {
+            console.warn('[VocabMeld] Stats write threw:', error);
+          }
+          resolve(null);
+        }
       });
-    });
+    } catch (error) {
+      if (!isContextInvalidated(error)) {
+        console.warn('[VocabMeld] Stats read threw:', error);
+      }
+      resolve(null);
+    }
   });
 }
 
@@ -206,7 +288,17 @@ async function addToWhitelist(original, translation, difficulty) {
       difficulty: difficulty || 'B1'
     });
     config.learnedWords = whitelist;
-    await new Promise(resolve => chrome.storage.sync.set({ learnedWords: whitelist }, resolve));
+    await new Promise((resolve) => {
+      if (!globalThis.chrome?.storage?.sync?.set) return resolve();
+      try {
+        chrome.storage.sync.set({ learnedWords: whitelist }, () => resolve());
+      } catch (error) {
+        if (!isContextInvalidated(error)) {
+          console.warn('[VocabMeld] Whitelist save threw:', error);
+        }
+        resolve();
+      }
+    });
   }
 }
 
@@ -223,7 +315,17 @@ async function addToMemorizeList(word) {
   if (!exists) {
     list.push({ word: trimmedWord, addedAt: Date.now() });
     config.memorizeList = list;
-    await new Promise(resolve => chrome.storage.sync.set({ memorizeList: list }, resolve));
+    await new Promise((resolve) => {
+      if (!globalThis.chrome?.storage?.sync?.set) return resolve();
+      try {
+        chrome.storage.sync.set({ memorizeList: list }, () => resolve());
+      } catch (error) {
+        if (!isContextInvalidated(error)) {
+          console.warn('[VocabMeld] Memorize list save threw:', error);
+        }
+        resolve();
+      }
+    });
 
     if (!config) {
       await loadConfig();
@@ -277,8 +379,8 @@ function generateFingerprint(text, path = '') {
 
 // ============ 文本替换（使用 text-replacer 服务） ============
 
-function applyReplacements(element, replacements) {
-  return textReplacer.applyReplacements(element, replacements);
+function applyReplacements(element, replacements, options) {
+  return textReplacer.applyReplacements(element, replacements, options);
 }
 
 function restoreOriginal(element) {
@@ -347,7 +449,9 @@ async function processSpecificWords(targetWords) {
         if (style.display === 'none' || style.visibility === 'hidden') return NodeFilter.FILTER_REJECT;
       } catch (e) {}
 
-      if (parent.isContentEditable) return NodeFilter.FILTER_REJECT;
+      if (parent.isContentEditable && !isInAllowedContentEditableRegion(parent)) {
+        return NodeFilter.FILTER_REJECT;
+      }
 
       const text = node.textContent.trim();
       if (text.length === 0) return NodeFilter.FILTER_REJECT;
@@ -493,7 +597,7 @@ async function processPage(viewportOnly = false) {
       }
     }
 
-    const limitedSegments = validSegments.slice(0, normalizeLengthLimit(config.lengthLimit));
+    const limitedSegments = validSegments;
 
     // 并行处理单个 segment
     const MAX_CONCURRENT = normalizeConcurrencyLimit(config.concurrencyLimit);
@@ -512,7 +616,7 @@ async function processPage(viewportOnly = false) {
         let immediateCount = 0;
         if (result.immediate?.length) {
           const filtered = result.immediate.filter(r => !whitelistWords.has(r.original.toLowerCase()));
-          immediateCount = applyReplacements(el, filtered);
+          immediateCount = applyReplacements(el, filtered, { scope: segment.scope });
           contentSegmenter.markProcessed(segment.fingerprint);
         }
 
@@ -544,7 +648,8 @@ async function processPage(viewportOnly = false) {
                 );
 
                 if (filtered.length > 0) {
-                  applyReplacements(el, filtered);
+                  applyReplacements(el, filtered, { scope: segment.scope });
+                  contentSegmenter.markProcessed(segment.fingerprint);
                 }
               }
             } finally {

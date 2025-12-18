@@ -97,7 +97,6 @@ export const DEFAULT_CONFIG = {
 
   // 高级设置
   concurrencyLimit: 5,
-  lengthLimit: 20,
 
   // 缓存统计
   cacheHits: 0,
@@ -117,8 +116,7 @@ export const CACHE_SIZE_LIMITS = {
 };
 
 export const ADVANCED_LIMITS = {
-  concurrencyLimit: { min: 1, max: 20 },
-  lengthLimit: { min: 1, max: 200 }
+  concurrencyLimit: { min: 1, max: 20 }
 };
 
 /**
@@ -141,10 +139,6 @@ function normalizeIntInRange(value, fallback, { min, max }) {
 
 export function normalizeConcurrencyLimit(value, fallback = DEFAULT_CONFIG.concurrencyLimit) {
   return normalizeIntInRange(value, fallback, ADVANCED_LIMITS.concurrencyLimit);
-}
-
-export function normalizeLengthLimit(value, fallback = DEFAULT_CONFIG.lengthLimit) {
-  return normalizeIntInRange(value, fallback, ADVANCED_LIMITS.lengthLimit);
 }
 
 // 需要跳过的标签

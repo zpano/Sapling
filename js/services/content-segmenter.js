@@ -5,6 +5,7 @@
 
 import { SKIP_TAGS, SKIP_CLASSES } from '../config/constants.js';
 import { isCodeText } from '../utils/word-filters.js';
+import { isInAllowedContentEditableRegion } from '../utils/dom-utils.js';
 
 /**
  * 内容分段器类
@@ -56,12 +57,7 @@ class ContentSegmenter {
     } catch (e) {}
 
     // 跳过可编辑元素
-    if (element.isContentEditable) {
-      return true;
-    }
-
-    // 跳过已处理的元素
-    if (element.hasAttribute('data-vocabmeld-processed')) {
+    if (element.isContentEditable && !isInAllowedContentEditableRegion(element)) {
       return true;
     }
 
@@ -154,6 +150,50 @@ class ContentSegmenter {
   getPageSegments(root = document.body, options = {}) {
     const { viewportOnly = false, margin = 300 } = options;
     const segments = [];
+    const inlineTextTags = new Set([
+      'A',
+      'ABBR',
+      'B',
+      'BDI',
+      'BDO',
+      'CITE',
+      'DEL',
+      'DFN',
+      'EM',
+      'I',
+      'INS',
+      'KBD',
+      'MARK',
+      'Q',
+      'S',
+      'SAMP',
+      'SMALL',
+      'SPAN',
+      'STRONG',
+      'SUB',
+      'SUP',
+      'TIME',
+      'U',
+      'VAR'
+    ]);
+    const CHUNK_OVERLAP = 200;
+
+    const toChunks = (text) => {
+      if (!text) return [];
+      const normalized = String(text);
+      if (normalized.length <= this.maxSegmentLength) {
+        return [{ chunkIndex: 0, text: normalized }];
+      }
+
+      const chunks = [];
+      const step = Math.max(1, this.maxSegmentLength - CHUNK_OVERLAP);
+      for (let start = 0, idx = 0; start < normalized.length; start += step, idx++) {
+        const chunk = normalized.slice(start, start + this.maxSegmentLength);
+        if (!chunk.trim()) continue;
+        chunks.push({ chunkIndex: idx, text: chunk });
+      }
+      return chunks;
+    };
     
     // 如果只处理视口内容，获取视口范围
     let viewportTop = 0;
@@ -179,7 +219,43 @@ class ContentSegmenter {
         }
       }
 
-      // 获取文本内容
+      const hasBlockElementChild = Array.from(container.children).some(child => {
+        if (!child?.tagName) return false;
+        if (child.tagName === 'BR') return false;
+        return !inlineTextTags.has(child.tagName);
+      });
+
+      const directText = this.getDirectTextContent(container);
+
+      // Mixed-content container: has block children but also meaningful direct text.
+      // Split direct text into multiple small run elements so each run can be processed independently.
+      if (hasBlockElementChild && directText.length > 10) {
+        const runElements = this.wrapDirectTextRuns(container);
+
+        for (const runEl of runElements) {
+          const runText = this.getTextContent(runEl);
+          if (!runText || runText.length < this.minSegmentLength) continue;
+          if (isCodeText(runText)) continue;
+
+          const path = this.getElementPath(runEl);
+          for (const chunk of toChunks(runText)) {
+            const chunkPath = `${path}::chunk${chunk.chunkIndex}`;
+            const fingerprint = this.generateFingerprint(chunk.text, chunkPath);
+            if (this.isProcessed(fingerprint)) continue;
+
+            segments.push({
+              element: runEl,
+              text: chunk.text,
+              fingerprint,
+              path: chunkPath,
+              scope: 'all'
+            });
+          }
+        }
+
+        continue;
+      }
+
       const text = this.getTextContent(container);
       
       if (!text || text.length < this.minSegmentLength) {
@@ -193,18 +269,19 @@ class ContentSegmenter {
 
       // 生成指纹并检查是否已处理
       const path = this.getElementPath(container);
-      const fingerprint = this.generateFingerprint(text, path);
-      
-      if (this.isProcessed(fingerprint)) {
-        continue;
-      }
+      for (const chunk of toChunks(text)) {
+        const chunkPath = `${path}::chunk${chunk.chunkIndex}`;
+        const fingerprint = this.generateFingerprint(chunk.text, chunkPath);
+        if (this.isProcessed(fingerprint)) continue;
 
-      segments.push({
-        element: container,
-        text: text.slice(0, this.maxSegmentLength),
-        fingerprint,
-        path
-      });
+        segments.push({
+          element: container,
+          text: chunk.text,
+          fingerprint,
+          path: chunkPath,
+          scope: 'all'
+        });
+      }
     }
 
     return segments;
@@ -299,6 +376,175 @@ class ContentSegmenter {
   }
 
   /**
+   * 获取元素的“直接可见”文本（只收集直接文本节点 + 直接内联子元素的文本）
+   * 主要用于处理 div 下裸露文本（例如 div/text()[n]），同时避免把整个容器子树当作一个段落。
+   * @param {Element} element - DOM 元素
+   * @returns {string}
+   */
+  getDirectTextContent(element) {
+    if (!element) return '';
+
+    const inlineTextTags = new Set([
+      'A',
+      'ABBR',
+      'B',
+      'BDI',
+      'BDO',
+      'CITE',
+      'DEL',
+      'DFN',
+      'EM',
+      'I',
+      'INS',
+      'KBD',
+      'MARK',
+      'Q',
+      'S',
+      'SAMP',
+      'SMALL',
+      'SPAN',
+      'STRONG',
+      'SUB',
+      'SUP',
+      'TIME',
+      'U',
+      'VAR'
+    ]);
+
+    const texts = [];
+    for (const child of Array.from(element.childNodes)) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        const t = child.textContent.trim();
+        if (!t || isCodeText(t)) continue;
+        texts.push(child.textContent);
+        continue;
+      }
+
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        const childEl = child;
+        if (!inlineTextTags.has(childEl.tagName)) continue;
+        if (this.shouldSkipNode(childEl)) continue;
+        if (childEl.closest?.('.vocabmeld-translated')) continue;
+
+        const t = childEl.textContent.trim();
+        if (!t || isCodeText(t)) continue;
+        texts.push(childEl.textContent);
+      }
+    }
+
+    return texts.join(' ').replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * 将容器的“直接文本段”（由直接文本节点/直接内联元素组成，并被块级子元素隔开）
+   * 包装成多个内部 <span>，并返回这些 span。
+   * 适用于“块级元素之间夹杂裸文本/BR”的结构（不依赖站点/编辑器特定标记）。
+   * @param {Element} element
+   * @returns {Element[]}
+   */
+  wrapDirectTextRuns(element) {
+    const results = [];
+    if (!element) return results;
+
+    const inlineTextTags = new Set([
+      'A',
+      'ABBR',
+      'B',
+      'BDI',
+      'BDO',
+      'CITE',
+      'DEL',
+      'DFN',
+      'EM',
+      'I',
+      'INS',
+      'KBD',
+      'MARK',
+      'Q',
+      'S',
+      'SAMP',
+      'SMALL',
+      'SPAN',
+      'STRONG',
+      'SUB',
+      'SUP',
+      'TIME',
+      'U',
+      'VAR'
+    ]);
+
+    const flush = (nodes) => {
+      if (!nodes.length) return;
+
+      const combined = nodes
+        .map(n => n.textContent || '')
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (combined.length <= 10) return;
+
+      const span = document.createElement('span');
+      span.setAttribute('data-vocabmeld-text-run', 'true');
+      span.style.whiteSpace = 'inherit';
+
+      element.insertBefore(span, nodes[0]);
+      for (const n of nodes) {
+        span.appendChild(n);
+      }
+      results.push(span);
+    };
+
+    let runNodes = [];
+
+    for (const child of Array.from(element.childNodes)) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        const t = child.textContent.trim();
+        if (!t || isCodeText(t)) {
+          continue;
+        }
+        runNodes.push(child);
+        continue;
+      }
+
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        const childEl = child;
+
+        // 已经包装过的 run：作为分隔点，避免嵌套
+        if (childEl.hasAttribute?.('data-vocabmeld-text-run') || childEl.hasAttribute?.('data-vocabmeld-direct-run')) {
+          flush(runNodes);
+          runNodes = [];
+          continue;
+        }
+
+        // <br> 视作 run 内部元素（保留换行）
+        if (childEl.tagName === 'BR') {
+          runNodes.push(childEl);
+          continue;
+        }
+
+        // 直接内联元素：作为 run 的一部分
+        if (inlineTextTags.has(childEl.tagName) && !this.shouldSkipNode(childEl)) {
+          if (!childEl.closest?.('.vocabmeld-translated')) {
+            const t = childEl.textContent.trim();
+            if (t && !isCodeText(t)) {
+              runNodes.push(childEl);
+              continue;
+            }
+          }
+        }
+
+        // 其它元素（块级 / 非内联）作为分隔点
+        flush(runNodes);
+        runNodes = [];
+      }
+    }
+
+    flush(runNodes);
+    return results;
+  }
+
+  /**
    * 获取元素的纯文本内容（排除子元素中的代码等）
    * @param {Element} element - DOM 元素
    * @returns {string}
@@ -311,6 +557,14 @@ class ContentSegmenter {
       NodeFilter.SHOW_TEXT,
       {
         acceptNode: (node) => {
+          const parent = node.parentElement;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+
+          // 跳过已替换的内容（包含其内部的 original/translation spans）
+          if (parent.closest?.('.vocabmeld-translated')) {
+            return NodeFilter.FILTER_REJECT;
+          }
+
           if (this.shouldSkipNode(node.parentElement)) {
             return NodeFilter.FILTER_REJECT;
           }

@@ -46,9 +46,12 @@ export const SKIP_CLASSES = [
 ];
 
 /**
- * 缓存最大容量（LRU）
+ * 默认跳过 contenteditable，但允许在特定区域内处理（例如只读/预览编辑器）
+ * 注意：在可编辑区域插入 span 可能影响编辑体验，谨慎添加选择器。
  */
-export const CACHE_MAX_SIZE = 2000;
+export const ALLOW_CONTENTEDITABLE_SELECTORS = [
+  '#tinymce-editor'
+];
 
 /**
  * 英文停用词列表（用于过滤）

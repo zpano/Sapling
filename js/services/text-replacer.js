@@ -4,6 +4,7 @@
  */
 
 import { SKIP_TAGS, SKIP_CLASSES } from '../config/constants.js';
+import { isInAllowedContentEditableRegion } from '../utils/dom-utils.js';
 
 /**
  * 文本替换器类
@@ -12,6 +13,33 @@ class TextReplacer {
   constructor() {
     this.config = null;
   }
+
+  static INLINE_TEXT_TAGS = new Set([
+    'A',
+    'ABBR',
+    'B',
+    'BDI',
+    'BDO',
+    'CITE',
+    'DEL',
+    'DFN',
+    'EM',
+    'I',
+    'INS',
+    'KBD',
+    'MARK',
+    'Q',
+    'S',
+    'SAMP',
+    'SMALL',
+    'SPAN',
+    'STRONG',
+    'SUB',
+    'SUP',
+    'TIME',
+    'U',
+    'VAR'
+  ]);
 
   /**
    * 设置配置
@@ -33,7 +61,8 @@ class TextReplacer {
         const parent = node.parentElement;
         if (!parent) return NodeFilter.FILTER_REJECT;
 
-        if (parent.classList?.contains('vocabmeld-translated')) {
+        // 跳过已替换的内容（包含其内部 original/translation spans）
+        if (parent.closest?.('.vocabmeld-translated')) {
           return NodeFilter.FILTER_REJECT;
         }
 
@@ -49,7 +78,9 @@ class TextReplacer {
           if (style.display === 'none' || style.visibility === 'hidden') return NodeFilter.FILTER_REJECT;
         } catch (e) {}
 
-        if (parent.isContentEditable) return NodeFilter.FILTER_REJECT;
+        if (parent.isContentEditable && !isInAllowedContentEditableRegion(parent)) {
+          return NodeFilter.FILTER_REJECT;
+        }
 
         const text = node.textContent.trim();
         if (text.length === 0) return NodeFilter.FILTER_REJECT;
@@ -63,6 +94,40 @@ class TextReplacer {
       nodes.push(node);
     }
     return nodes;
+  }
+
+  /**
+   * 获取元素“直接可见”范围内的文本节点（直接文本节点 + 直接内联子元素内的文本节点）
+   * 用于处理 div 下裸露文本（div/text()[n]），避免把整个容器子树都作为替换范围。
+   * @param {Element} element - DOM 元素
+   * @returns {Text[]}
+   */
+  getDirectTextNodes(element) {
+    const nodes = [];
+    if (!element) return nodes;
+
+    for (const child of Array.from(element.childNodes)) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        const t = child.textContent.trim();
+        if (!t) continue;
+        nodes.push(child);
+        continue;
+      }
+
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        const childEl = child;
+        if (!TextReplacer.INLINE_TEXT_TAGS.has(childEl.tagName)) continue;
+        if (childEl.closest?.('.vocabmeld-translated')) continue;
+        nodes.push(...this.getTextNodes(childEl));
+      }
+    }
+
+    return nodes;
+  }
+
+  getScopedTextNodes(element, scope = 'all') {
+    if (scope === 'direct') return this.getDirectTextNodes(element);
+    return this.getTextNodes(element);
   }
 
   /**
@@ -114,12 +179,14 @@ class TextReplacer {
    * 在元素中查找并替换词汇
    * @param {Element} element - DOM 元素
    * @param {Array} replacements - 替换项 [{ original, translation, phonetic, difficulty, partOfSpeech, shortDefinition, position, sourceLang, example }]
+   * @param {object} options - 选项 { scope: 'all' | 'direct' }
    * @returns {number} - 替换数量
    */
-  applyReplacements(element, replacements) {
+  applyReplacements(element, replacements, options = {}) {
     if (!element || !replacements?.length) return 0;
 
     let count = 0;
+    const scope = options.scope || 'all';
 
     // 按位置排序替换项（从后往前替换，避免位置偏移）
     const sortedReplacements = [...replacements].sort((a, b) => (b.position || 0) - (a.position || 0));
@@ -136,7 +203,7 @@ class TextReplacer {
       const lowerOriginal = original.toLowerCase();
 
       // 每次都重新获取文本节点（因为 DOM 可能已更改）
-      const textNodes = this.getTextNodes(element);
+      const textNodes = this.getScopedTextNodes(element, scope);
 
       for (let i = 0; i < textNodes.length; i++) {
         const textNode = textNodes[i];
@@ -194,8 +261,6 @@ class TextReplacer {
       }
     }
 
-    // 标记元素已处理
-    if (count > 0) element.setAttribute('data-vocabmeld-processed', 'true');
     return count;
   }
 
@@ -216,8 +281,14 @@ class TextReplacer {
    */
   restoreAll(root = document.body) {
     root.querySelectorAll('.vocabmeld-translated').forEach(el => this.restoreOriginal(el));
-    root.querySelectorAll('[data-vocabmeld-processed]').forEach(el => {
-      el.removeAttribute('data-vocabmeld-processed');
+    root.querySelectorAll('[data-vocabmeld-processed]').forEach(el => el.removeAttribute('data-vocabmeld-processed'));
+
+    // Unwrap internal text-run wrappers created for mixed-content containers.
+    root.querySelectorAll('[data-vocabmeld-text-run],[data-vocabmeld-direct-run]').forEach(el => {
+      const parent = el.parentNode;
+      if (!parent) return;
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
     });
   }
 }
