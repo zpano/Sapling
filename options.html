@@ -422,20 +422,39 @@ another-site.org"></textarea>
             <div class="cache-progress" id="cacheProgress"></div>
           </div>
           <div class="cache-info">
-            <span>已缓存: <strong id="statCacheSize">0</strong> / <strong id="statCacheMaxSize">2000</strong></span>
+            <span>已缓存: <strong id="statCacheSize">0</strong> / <strong id="statCacheMaxSize">2048</strong></span>
             <span>命中率: <strong id="statHitRate">0%</strong></span>
           </div>
 
           <div class="form-group">
             <label for="cacheMaxSize">缓存容量上限</label>
             <div class="difficulty-selector cache-size-selector">
-              <input type="range" id="cacheMaxSize" min="2000" max="8192" value="2000" step="1">
-              <div class="difficulty-labels">
-                <span>2000</span>
-                <span>8192</span>
+              <div class="cache-size-controls">
+                <div class="cache-size-range">
+                  <input type="range" id="cacheMaxSize" min="2048" max="8192" value="2048" step="1024" list="cacheMaxSizeTicks">
+                  <datalist id="cacheMaxSizeTicks">
+                    <option value="2048" label="2048"></option>
+                    <option value="3072" label="3072"></option>
+                    <option value="4096" label="4096"></option>
+                    <option value="5120" label="5120"></option>
+                    <option value="6144" label="6144"></option>
+                    <option value="7168" label="7168"></option>
+                    <option value="8192" label="8192"></option>
+                  </datalist>
+                  <div class="cache-size-labels">
+                    <span>2048</span>
+                    <span>3072</span>
+                    <span>4096</span>
+                    <span>5120</span>
+                    <span>6144</span>
+                    <span>7168</span>
+                    <span>8192</span>
+                  </div>
+                </div>
+                <input type="number" id="cacheMaxSizeInput" min="2048" max="8192" step="1024" value="2048">
               </div>
             </div>
-            <p class="help-text">当前：<strong id="cacheMaxSizeValue">2000</strong>（调小会自动删除最旧缓存）</p>
+            <p class="help-text">当前：<strong id="cacheMaxSizeValue">2048</strong>（调小会自动删除最旧缓存）</p>
           </div>
         </div>
 
@@ -445,9 +464,15 @@ another-site.org"></textarea>
         </div>
       </section>
 
-      <!-- 设置页面现在自动保存，无需手动保存按钮 -->
+      <!-- 设置页面支持自动保存，也提供手动保存按钮 -->
     </main>
   </div>
+
+  <button class="btn btn-primary manual-save-btn" id="manualSaveBtn" type="button" title="保存设置">
+    手动保存
+  </button>
+
+  <div class="options-toast-container" id="optionsToastContainer" aria-live="polite" aria-atomic="true"></div>
 
   <script src="js/options.js"></script>
 </body>

@@ -93,7 +93,7 @@ export const DEFAULT_CONFIG = {
   lastResetDate: new Date().toISOString().split('T')[0],
   
   // 缓存设置
-  cacheMaxSize: 2000,
+  cacheMaxSize: 2048,
 
   // 高级设置
   concurrencyLimit: 5,
@@ -105,15 +105,17 @@ export const DEFAULT_CONFIG = {
 
 // 缓存配置
 export const CACHE_CONFIG = {
-  maxSize: 2000,
+  maxSize: 2048,
   maxSizeMax: 8192,
   storageKey: 'vocabmeld_word_cache'
 };
 
 export const CACHE_SIZE_LIMITS = {
-  min: 2000,
+  min: 2048,
   max: 8192
 };
+
+export const CACHE_SIZE_STEP = 1024;
 
 export const ADVANCED_LIMITS = {
   concurrencyLimit: { min: 1, max: 20 }
@@ -128,7 +130,9 @@ export const ADVANCED_LIMITS = {
 export function normalizeCacheMaxSize(value, fallback = CACHE_CONFIG.maxSize) {
   const parsed = Number.parseInt(String(value), 10);
   if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(CACHE_SIZE_LIMITS.max, Math.max(CACHE_SIZE_LIMITS.min, parsed));
+  const clamped = Math.min(CACHE_SIZE_LIMITS.max, Math.max(CACHE_SIZE_LIMITS.min, parsed));
+  const snapped = Math.round(clamped / CACHE_SIZE_STEP) * CACHE_SIZE_STEP;
+  return Math.min(CACHE_SIZE_LIMITS.max, Math.max(CACHE_SIZE_LIMITS.min, snapped));
 }
 
 function normalizeIntInRange(value, fallback, { min, max }) {

@@ -65,7 +65,7 @@ chrome.runtime.onInstalled.addListener((details) => {
       whitelist: [],
       learnedWords: [],
       memorizeList: [],
-      cacheMaxSize: 2000,
+      cacheMaxSize: CACHE_CONFIG.maxSize,
       totalWords: 0,
       todayWords: 0,
       lastResetDate: new Date().toISOString().split('T')[0],
@@ -74,7 +74,7 @@ chrome.runtime.onInstalled.addListener((details) => {
     });
   } else {
     chrome.storage.sync.get('cacheMaxSize', (result) => {
-      if (result.cacheMaxSize == null) chrome.storage.sync.set({ cacheMaxSize: 2000 });
+      if (result.cacheMaxSize == null) chrome.storage.sync.set({ cacheMaxSize: CACHE_CONFIG.maxSize });
     });
   }
   

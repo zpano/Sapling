@@ -13,16 +13,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-  const DEFAULT_CACHE_MAX_SIZE = 2000;
+  const CACHE_MAX_SIZE_STEP = 1024;
+  const DEFAULT_CACHE_MAX_SIZE = 2048;
   const CACHE_MAX_SIZE_LIMIT = 8192;
-  const CACHE_MIN_SIZE_LIMIT = 2000;
+  const CACHE_MIN_SIZE_LIMIT = 2048;
   const DEFAULT_CONCURRENCY_LIMIT = 5;
   const CONCURRENCY_LIMIT_MAX = 20;
 
   function normalizeCacheMaxSize(value) {
     const parsed = Number.parseInt(String(value), 10);
     if (!Number.isFinite(parsed)) return DEFAULT_CACHE_MAX_SIZE;
-    return Math.min(CACHE_MAX_SIZE_LIMIT, Math.max(CACHE_MIN_SIZE_LIMIT, parsed));
+    const clamped = Math.min(CACHE_MAX_SIZE_LIMIT, Math.max(CACHE_MIN_SIZE_LIMIT, parsed));
+    const snapped = Math.round(clamped / CACHE_MAX_SIZE_STEP) * CACHE_MAX_SIZE_STEP;
+    return Math.min(CACHE_MAX_SIZE_LIMIT, Math.max(CACHE_MIN_SIZE_LIMIT, snapped));
   }
 
   function normalizePositiveInt(value, fallback, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) {
@@ -39,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let saveTimeout;
   function debouncedSave(delay = 500) {
     clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(saveSettings, delay);
+    saveTimeout = setTimeout(() => queueSave({ source: 'auto' }), delay);
   }
 
   // DOM 元素
@@ -108,13 +111,71 @@ document.addEventListener('DOMContentLoaded', async () => {
     statHitRate: document.getElementById('statHitRate'),
     cacheProgress: document.getElementById('cacheProgress'),
     cacheMaxSize: document.getElementById('cacheMaxSize'),
+    cacheMaxSizeInput: document.getElementById('cacheMaxSizeInput'),
     cacheMaxSizeValue: document.getElementById('cacheMaxSizeValue'),
     resetTodayBtn: document.getElementById('resetTodayBtn'),
-    resetAllBtn: document.getElementById('resetAllBtn')
+    resetAllBtn: document.getElementById('resetAllBtn'),
+
+    // 固定位置操作
+    manualSaveBtn: document.getElementById('manualSaveBtn'),
+    optionsToastContainer: document.getElementById('optionsToastContainer')
   };
 
   let lastCacheMaxSize = DEFAULT_CACHE_MAX_SIZE;
   let lastKnownCacheSize = 0;
+  let lastSavedSettingsJson = null;
+  let saveQueue = Promise.resolve();
+  let lastAutoSaveToastAt = 0;
+  let lastAutoSaveErrorToastAt = 0;
+
+  function showOptionsToast(message, { type = 'success', durationMs = 2200 } = {}) {
+    const container = elements.optionsToastContainer;
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `options-toast ${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => {
+      toast.classList.add('show');
+    });
+
+    const remove = () => toast.remove();
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(remove, 220);
+    }, durationMs);
+  }
+
+  function shouldShowAutoSaveToast() {
+    const now = Date.now();
+    if (now - lastAutoSaveToastAt < 1600) return false;
+    lastAutoSaveToastAt = now;
+    return true;
+  }
+
+  function shouldShowAutoSaveErrorToast() {
+    const now = Date.now();
+    if (now - lastAutoSaveErrorToastAt < 2500) return false;
+    lastAutoSaveErrorToastAt = now;
+    return true;
+  }
+
+  function queueSave({ source = 'auto' } = {}) {
+    saveQueue = saveQueue
+      .then(() => saveSettings({ source }))
+      .catch(() => {});
+    return saveQueue;
+  }
+
+  function setCacheMaxSizeUI(value, { preserveInputText = false } = {}) {
+    const normalized = normalizeCacheMaxSize(value);
+    if (elements.cacheMaxSize) elements.cacheMaxSize.value = String(normalized);
+    if (elements.cacheMaxSizeInput && !preserveInputText) elements.cacheMaxSizeInput.value = String(normalized);
+    updateCacheMaxSizeLabel(normalized);
+    renderCacheStatus(lastKnownCacheSize, normalized);
+  }
 
   function updateCacheMaxSizeLabel(value) {
     const normalized = normalizeCacheMaxSize(value);
@@ -174,15 +235,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       // 缓存容量
       const cacheMaxSize = normalizeCacheMaxSize(result.cacheMaxSize);
       lastCacheMaxSize = cacheMaxSize;
-      if (elements.cacheMaxSize) elements.cacheMaxSize.value = String(cacheMaxSize);
-      updateCacheMaxSizeLabel(cacheMaxSize);
-      renderCacheStatus(lastKnownCacheSize, cacheMaxSize);
+      setCacheMaxSizeUI(cacheMaxSize);
 
       // 加载词汇列表
       loadWordLists(result);
       
       // 加载统计
       loadStats(result);
+
+      lastSavedSettingsJson = JSON.stringify(collectSettingsFromUI());
     });
   }
 
@@ -414,38 +475,73 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 保存设置（静默保存）
-  async function saveSettings() {
-    const normalizedCacheMaxSize = normalizeCacheMaxSize(elements.cacheMaxSize?.value);
-    if (elements.cacheMaxSize) elements.cacheMaxSize.value = String(normalizedCacheMaxSize);
-    updateCacheMaxSizeLabel(normalizedCacheMaxSize);
-    renderCacheStatus(lastKnownCacheSize, normalizedCacheMaxSize);
+  function collectSettingsFromUI() {
+    const normalizedCacheMaxSize = normalizeCacheMaxSize(
+      elements.cacheMaxSize?.value ?? elements.cacheMaxSizeInput?.value
+    );
+    setCacheMaxSizeUI(normalizedCacheMaxSize);
 
     const normalizedConcurrencyLimit = normalizeConcurrencyLimit(elements.concurrencyLimit?.value);
     if (elements.concurrencyLimit) elements.concurrencyLimit.value = String(normalizedConcurrencyLimit);
 
-    const settings = {
+    return {
       apiEndpoint: elements.apiEndpoint.value.trim(),
       apiKey: elements.apiKey.value.trim(),
       modelName: elements.modelName.value.trim(),
       nativeLanguage: elements.nativeLanguage.value,
       targetLanguage: elements.targetLanguage.value,
       difficultyLevel: CEFR_LEVELS[elements.difficultyLevel.value],
-      intensity: document.querySelector('input[name="intensity"]:checked').value,
+      intensity: document.querySelector('input[name="intensity"]:checked')?.value || 'medium',
       autoProcess: elements.autoProcess.checked,
       showPhonetic: elements.showPhonetic.checked,
       pronunciationProvider: elements.pronunciationProvider.value,
       youdaoPronunciationType: Number.parseInt(elements.youdaoPronunciationType.value, 10) === 1 ? 1 : 2,
-      translationStyle: document.querySelector('input[name="translationStyle"]:checked').value,
+      translationStyle: document.querySelector('input[name="translationStyle"]:checked')?.value || 'original-translation',
       blacklist: elements.blacklistInput.value.split('\n').filter(s => s.trim()),
       whitelist: elements.whitelistInput.value.split('\n').filter(s => s.trim()),
       cacheMaxSize: normalizedCacheMaxSize,
       concurrencyLimit: normalizedConcurrencyLimit
     };
+  }
+
+  // 保存设置（自动/手动）
+  async function saveSettings({ source = 'auto' } = {}) {
+    const isManual = source === 'manual';
+    const manualSaveBtn = elements.manualSaveBtn;
+    const defaultBtnText = manualSaveBtn?.dataset?.defaultText || manualSaveBtn?.textContent || '手动保存';
+    if (isManual && manualSaveBtn) {
+      manualSaveBtn.dataset.defaultText = defaultBtnText.trim();
+      manualSaveBtn.disabled = true;
+      manualSaveBtn.textContent = '保存中...';
+    }
+
+    const settings = collectSettingsFromUI();
+    const normalizedCacheMaxSize = settings.cacheMaxSize;
+    const settingsJson = JSON.stringify(settings);
+
+    if (!isManual && lastSavedSettingsJson === settingsJson) {
+      return;
+    }
+
+    if (isManual && lastSavedSettingsJson === settingsJson) {
+      showOptionsToast('没有需要保存的更改', { type: 'success', durationMs: 1600 });
+      if (manualSaveBtn) {
+        manualSaveBtn.disabled = false;
+        manualSaveBtn.textContent = manualSaveBtn.dataset.defaultText || '手动保存';
+      }
+      return;
+    }
 
     try {
       await chrome.storage.sync.set(settings);
-      console.log('[VocabMeld] Settings saved automatically');
+      console.log(`[VocabMeld] Settings saved (${source})`);
+      lastSavedSettingsJson = settingsJson;
+
+      if (isManual) {
+        showOptionsToast('保存成功', { type: 'success' });
+      } else if (shouldShowAutoSaveToast()) {
+        showOptionsToast('自动保存成功', { type: 'success' });
+      }
 
       if (normalizedCacheMaxSize !== lastCacheMaxSize) {
         lastCacheMaxSize = normalizedCacheMaxSize;
@@ -458,6 +554,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch (error) {
       console.error('[VocabMeld] Failed to save settings:', error);
+      if (isManual) {
+        showOptionsToast('保存失败，请稍后重试', { type: 'error', durationMs: 3600 });
+      } else if (shouldShowAutoSaveErrorToast()) {
+        showOptionsToast('自动保存失败，请检查控制台日志', { type: 'error', durationMs: 4200 });
+      }
+    } finally {
+      if (isManual && manualSaveBtn) {
+        manualSaveBtn.disabled = false;
+        manualSaveBtn.textContent = manualSaveBtn.dataset.defaultText || '手动保存';
+      }
     }
   }
 
@@ -530,14 +636,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (elements.cacheMaxSize) {
       elements.cacheMaxSize.addEventListener('input', () => {
         const normalized = normalizeCacheMaxSize(elements.cacheMaxSize.value);
-        updateCacheMaxSizeLabel(normalized);
-        renderCacheStatus(lastKnownCacheSize, normalized);
+        setCacheMaxSizeUI(normalized);
         debouncedSave(200);
       });
       elements.cacheMaxSize.addEventListener('change', () => {
         const normalized = normalizeCacheMaxSize(elements.cacheMaxSize.value);
-        updateCacheMaxSizeLabel(normalized);
-        renderCacheStatus(lastKnownCacheSize, normalized);
+        setCacheMaxSizeUI(normalized);
+        debouncedSave(200);
+      });
+    }
+
+    if (elements.cacheMaxSizeInput) {
+      elements.cacheMaxSizeInput.addEventListener('input', () => {
+        const parsed = Number.parseInt(String(elements.cacheMaxSizeInput.value), 10);
+        if (!Number.isFinite(parsed)) return;
+        setCacheMaxSizeUI(parsed, { preserveInputText: true });
+      });
+      elements.cacheMaxSizeInput.addEventListener('change', () => {
+        const normalized = normalizeCacheMaxSize(elements.cacheMaxSizeInput.value);
+        setCacheMaxSizeUI(normalized);
+        debouncedSave(200);
+      });
+      elements.cacheMaxSizeInput.addEventListener('blur', () => {
+        const normalized = normalizeCacheMaxSize(elements.cacheMaxSizeInput.value);
+        setCacheMaxSizeUI(normalized);
         debouncedSave(200);
       });
     }
@@ -551,6 +673,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 事件绑定
   function bindEvents() {
+    if (elements.manualSaveBtn) {
+      elements.manualSaveBtn.dataset.defaultText = elements.manualSaveBtn.textContent.trim();
+      elements.manualSaveBtn.addEventListener('click', () => queueSave({ source: 'manual' }));
+    }
+
     // 导航切换
     elements.navItems.forEach(item => {
       item.addEventListener('click', (e) => {
