@@ -86,6 +86,40 @@ async function saveWordCache() {
   });
 }
 
+// Debounced cache persistence: avoid writing the full cache for every paragraph/API response.
+let wordCacheSaveRequested = false;
+let wordCacheSaveTimer = null;
+let wordCacheSaveInFlight = Promise.resolve();
+
+async function runWordCacheSaveLoop() {
+  while (wordCacheSaveRequested) {
+    wordCacheSaveRequested = false;
+    wordCacheSaveInFlight = wordCacheSaveInFlight
+      .catch(() => {})
+      .then(() => saveWordCache());
+    await wordCacheSaveInFlight;
+  }
+}
+
+function scheduleWordCacheSave(delay = 800) {
+  wordCacheSaveRequested = true;
+  if (wordCacheSaveTimer) return;
+
+  wordCacheSaveTimer = setTimeout(() => {
+    wordCacheSaveTimer = null;
+    void runWordCacheSaveLoop();
+  }, delay);
+}
+
+async function flushWordCacheSave() {
+  wordCacheSaveRequested = true;
+  if (wordCacheSaveTimer) {
+    clearTimeout(wordCacheSaveTimer);
+    wordCacheSaveTimer = null;
+  }
+  await runWordCacheSaveLoop();
+}
+
 function isContextInvalidated(error) {
   const message = (error && error.message) || String(error || '');
   return message.includes('Extension context invalidated');
@@ -232,7 +266,7 @@ async function translateText(text) {
     await loadWordCache();
   }
 
-  return await apiService.translateText(text, config, wordCache, updateStats, saveWordCache);
+  return await apiService.translateText(text, config, wordCache, updateStats, scheduleWordCacheSave);
 }
 
 async function translateSpecificWords(targetWords) {
@@ -240,7 +274,7 @@ async function translateSpecificWords(targetWords) {
     await loadWordCache();
   }
 
-  return await apiService.translateSpecificWords(targetWords, config, wordCache, updateStats, saveWordCache);
+  return await apiService.translateSpecificWords(targetWords, config, wordCache, updateStats, scheduleWordCacheSave);
 }
 
 async function processSpecificWords(targetWords) {
@@ -680,6 +714,11 @@ async function init() {
 
   tooltipManager.createTooltip();
   setupEventListeners();
+
+  // Best-effort flush pending cache writes when leaving the page.
+  window.addEventListener('beforeunload', () => {
+    void flushWordCacheSave();
+  }, { capture: true });
 
   if (config.autoProcess && config.enabled && config.apiKey) {
     setTimeout(() => processPage(), 1000);

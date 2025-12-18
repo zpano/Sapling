@@ -16,6 +16,35 @@ import { segmentText, reconstructTextWithWords, filterWords } from '../utils/tex
 class ApiService {
   constructor() {
     this.config = null;
+    // Limit in-flight network requests to avoid browser-level queuing bursts.
+    this._maxConcurrentRequests = 3;
+    this._activeRequestCount = 0;
+    this._requestQueue = [];
+  }
+
+  _pumpRequestQueue() {
+    while (this._activeRequestCount < this._maxConcurrentRequests && this._requestQueue.length > 0) {
+      const { task, resolve, reject } = this._requestQueue.shift();
+      this._activeRequestCount++;
+
+      (async () => {
+        try {
+          resolve(await task());
+        } catch (error) {
+          reject(error);
+        } finally {
+          this._activeRequestCount--;
+          this._pumpRequestQueue();
+        }
+      })();
+    }
+  }
+
+  _runLimited(task) {
+    return new Promise((resolve, reject) => {
+      this._requestQueue.push({ task, resolve, reject });
+      this._pumpRequestQueue();
+    });
   }
 
   /**
@@ -214,8 +243,8 @@ class ApiService {
     const aiTargetCount = Math.max(maxAsyncReplacements, Math.ceil(maxReplacements * 1.5));
     const aiMaxCount = maxReplacements * 2;
 
-    // 异步调用 API
-    const asyncPromise = (async () => {
+    // 异步调用 API（受限并发，避免大量段落同时 fetch 导致排队/突发）
+    const asyncPromise = this._runLimited(async () => {
       try {
         const systemPrompt = buildVocabularySelectionPrompt({
           sourceLang,
@@ -290,8 +319,12 @@ class ApiService {
           });
         }
 
-        // 保存缓存
-        await saveCacheCallback();
+        // 保存缓存：best-effort，避免阻塞后续段落/请求调度
+        try {
+          void saveCacheCallback();
+        } catch {
+          // ignore
+        }
 
         // 本地过滤：只保留符合用户难度设置的词汇
         const filteredResults = allResults.filter(item => {
@@ -350,7 +383,7 @@ class ApiService {
         console.error('[VocabMeld] Async translation error:', error);
         return [];
       }
-    })();
+    });
 
     return { immediate: immediateResults, async: asyncPromise };
   }
@@ -414,32 +447,33 @@ class ApiService {
         // 用户消息只包含要翻译的单词列表（逗号分隔）
         const userPrompt = uncached.join(', ');
 
-        const response = await fetch(config.apiEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${config.apiKey}`
-          },
-          body: JSON.stringify({
-            model: config.modelName,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
-            ],
-            temperature: 0,
-            max_tokens: 4096
-          })
+        const apiResults = await this._runLimited(async () => {
+          const response = await fetch(config.apiEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${config.apiKey}`
+            },
+            body: JSON.stringify({
+              model: config.modelName,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+              ],
+              temperature: 0,
+              max_tokens: 4096
+            })
+          });
+
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error?.message || `API Error: ${response.status}`);
+          }
+
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content || '[]';
+          return this.parseApiResponse(content);
         });
-
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          throw new Error(error.error?.message || `API Error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content || '[]';
-
-        let apiResults = this.parseApiResponse(content);
 
         // 缓存结果
         for (const item of apiResults) {
@@ -474,8 +508,12 @@ class ApiService {
           });
         }
 
-        // 保存缓存
-        await saveCacheCallback();
+        // 保存缓存：best-effort，避免阻塞后续段落/请求调度
+        try {
+          void saveCacheCallback();
+        } catch {
+          // ignore
+        }
 
         // 为 API 结果添加 sourceLang
         const apiResultsWithLang = apiResults.map(item => ({
