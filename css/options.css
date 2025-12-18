@@ -160,7 +160,7 @@ body {
   margin-bottom: 24px;
 }
 
-.form-group:first-of-type {
+.settings-section > .form-group:first-of-type {
   margin-top: 8px;
 }
 
@@ -185,6 +185,7 @@ body {
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: 14px;
+  line-height: 20px;
   transition: var(--transition);
 }
 
