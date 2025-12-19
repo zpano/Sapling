@@ -57,6 +57,7 @@ chrome.runtime.onInstalled.addListener((details) => {
       intensity: 'medium',
       autoProcess: false,
       showPhonetic: true,
+      allowLeftClickPronunciation: true,
       pronunciationProvider: 'wiktionary',
       youdaoPronunciationType: 2,
       translationStyle: 'original-translation',

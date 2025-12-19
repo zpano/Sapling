@@ -32,6 +32,7 @@ async function loadConfig() {
         intensity: safeResult.intensity || 'medium',
         autoProcess: safeResult.autoProcess ?? false,
         showPhonetic: safeResult.showPhonetic ?? true,
+        allowLeftClickPronunciation: safeResult.allowLeftClickPronunciation ?? true,
         pronunciationProvider: safeResult.pronunciationProvider || 'wiktionary',
         youdaoPronunciationType: Number(safeResult.youdaoPronunciationType) === 1 ? 1 : 2,
         translationStyle: safeResult.translationStyle || 'original-translation',
@@ -757,6 +758,7 @@ function setupEventListeners() {
     }
 
     // 左键点击被替换的单词：直接发音（无需点击 tooltip 的发音按钮）
+    if (config?.allowLeftClickPronunciation === false) return;
     const clickedWord = e.target.closest('.vocabmeld-translated');
     if (!clickedWord) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;

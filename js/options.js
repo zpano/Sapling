@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 行为设置
     autoProcess: document.getElementById('autoProcess'),
     showPhonetic: document.getElementById('showPhonetic'),
+    allowLeftClickPronunciation: document.getElementById('allowLeftClickPronunciation'),
     pronunciationProvider: document.getElementById('pronunciationProvider'),
     youdaoPronunciationType: document.getElementById('youdaoPronunciationType'),
     youdaoPronunciationSettings: document.getElementById('youdaoPronunciationSettings'),
@@ -216,6 +217,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // 行为设置
       elements.autoProcess.checked = result.autoProcess ?? false;
       elements.showPhonetic.checked = result.showPhonetic ?? true;
+      elements.allowLeftClickPronunciation.checked = result.allowLeftClickPronunciation ?? true;
       elements.pronunciationProvider.value = result.pronunciationProvider || 'wiktionary';
       elements.youdaoPronunciationType.value = String(result.youdaoPronunciationType ?? 2);
       updatePronunciationSettingsVisibility();
@@ -494,6 +496,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       intensity: document.querySelector('input[name="intensity"]:checked')?.value || 'medium',
       autoProcess: elements.autoProcess.checked,
       showPhonetic: elements.showPhonetic.checked,
+      allowLeftClickPronunciation: elements.allowLeftClickPronunciation.checked,
       pronunciationProvider: elements.pronunciationProvider.value,
       youdaoPronunciationType: Number.parseInt(elements.youdaoPronunciationType.value, 10) === 1 ? 1 : 2,
       translationStyle: document.querySelector('input[name="translationStyle"]:checked')?.value || 'original-translation',
@@ -626,7 +629,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 开关 - 改变时保存
     const checkboxes = [
       elements.autoProcess,
-      elements.showPhonetic
+      elements.showPhonetic,
+      elements.allowLeftClickPronunciation
     ];
 
     checkboxes.forEach(checkbox => {

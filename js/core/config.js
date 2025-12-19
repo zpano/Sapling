@@ -79,6 +79,7 @@ export const DEFAULT_CONFIG = {
   // 行为设置
   autoProcess: false,
   showPhonetic: true,
+  allowLeftClickPronunciation: true,
   pronunciationProvider: 'wiktionary',
   youdaoPronunciationType: 2,
   enabled: true,
