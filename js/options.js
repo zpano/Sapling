@@ -71,6 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     autoProcess: document.getElementById('autoProcess'),
     showPhonetic: document.getElementById('showPhonetic'),
     allowLeftClickPronunciation: document.getElementById('allowLeftClickPronunciation'),
+    restoreAllSameWordsOnLearned: document.getElementById('restoreAllSameWordsOnLearned'),
     pronunciationProvider: document.getElementById('pronunciationProvider'),
     youdaoPronunciationType: document.getElementById('youdaoPronunciationType'),
     youdaoPronunciationSettings: document.getElementById('youdaoPronunciationSettings'),
@@ -218,6 +219,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       elements.autoProcess.checked = result.autoProcess ?? false;
       elements.showPhonetic.checked = result.showPhonetic ?? true;
       elements.allowLeftClickPronunciation.checked = result.allowLeftClickPronunciation ?? true;
+      elements.restoreAllSameWordsOnLearned.checked = result.restoreAllSameWordsOnLearned ?? true;
       elements.pronunciationProvider.value = result.pronunciationProvider || 'wiktionary';
       elements.youdaoPronunciationType.value = String(result.youdaoPronunciationType ?? 2);
       updatePronunciationSettingsVisibility();
@@ -497,6 +499,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       autoProcess: elements.autoProcess.checked,
       showPhonetic: elements.showPhonetic.checked,
       allowLeftClickPronunciation: elements.allowLeftClickPronunciation.checked,
+      restoreAllSameWordsOnLearned: elements.restoreAllSameWordsOnLearned.checked,
       pronunciationProvider: elements.pronunciationProvider.value,
       youdaoPronunciationType: Number.parseInt(elements.youdaoPronunciationType.value, 10) === 1 ? 1 : 2,
       translationStyle: document.querySelector('input[name="translationStyle"]:checked')?.value || 'original-translation',
@@ -630,7 +633,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const checkboxes = [
       elements.autoProcess,
       elements.showPhonetic,
-      elements.allowLeftClickPronunciation
+      elements.allowLeftClickPronunciation,
+      elements.restoreAllSameWordsOnLearned
     ];
 
     checkboxes.forEach(checkbox => {

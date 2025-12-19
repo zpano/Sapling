@@ -58,6 +58,7 @@ chrome.runtime.onInstalled.addListener((details) => {
       autoProcess: false,
       showPhonetic: true,
       allowLeftClickPronunciation: true,
+      restoreAllSameWordsOnLearned: true,
       pronunciationProvider: 'wiktionary',
       youdaoPronunciationType: 2,
       translationStyle: 'original-translation',

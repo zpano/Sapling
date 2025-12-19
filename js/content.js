@@ -33,6 +33,7 @@ async function loadConfig() {
         autoProcess: safeResult.autoProcess ?? false,
         showPhonetic: safeResult.showPhonetic ?? true,
         allowLeftClickPronunciation: safeResult.allowLeftClickPronunciation ?? true,
+        restoreAllSameWordsOnLearned: safeResult.restoreAllSameWordsOnLearned ?? true,
         pronunciationProvider: safeResult.pronunciationProvider || 'wiktionary',
         youdaoPronunciationType: Number(safeResult.youdaoPronunciationType) === 1 ? 1 : 2,
         translationStyle: safeResult.translationStyle || 'original-translation',
@@ -386,6 +387,21 @@ function applyReplacements(element, replacements, options) {
 
 function restoreOriginal(element) {
   return textReplacer.restoreOriginal(element);
+}
+
+function restoreAllMatchingOriginal(original) {
+  const normalized = String(original || '').trim().toLowerCase();
+  if (!normalized) return 0;
+
+  let restored = 0;
+  document.querySelectorAll('.vocabmeld-translated').forEach((el) => {
+    const dataOriginal = el.getAttribute('data-original') || '';
+    if (dataOriginal.trim().toLowerCase() !== normalized) return;
+    restoreOriginal(el);
+    restored += 1;
+  });
+
+  return restored;
 }
 
 function restoreAll() {
@@ -748,7 +764,11 @@ function setupEventListeners() {
           break;
         case 'learned':
           await addToWhitelist(original, translation, difficulty);
-          restoreOriginal(currentElement);
+          if (config?.restoreAllSameWordsOnLearned ?? true) {
+            restoreAllMatchingOriginal(original);
+          } else {
+            restoreOriginal(currentElement);
+          }
           tooltipManager.hide(true);
           showToast(`"${original}" 已标记为已学会`);
           break;

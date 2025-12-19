@@ -80,6 +80,7 @@ export const DEFAULT_CONFIG = {
   autoProcess: false,
   showPhonetic: true,
   allowLeftClickPronunciation: true,
+  restoreAllSameWordsOnLearned: true,
   pronunciationProvider: 'wiktionary',
   youdaoPronunciationType: 2,
   enabled: true,
