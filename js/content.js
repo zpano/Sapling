@@ -12,7 +12,7 @@ import { textReplacer } from './services/text-replacer.js';
 // ============ 状态管理 ============
 let config = null;
 let isProcessing = false;
-const WORD_CACHE_STORAGE_KEY = 'vocabmeld_word_cache';
+const WORD_CACHE_STORAGE_KEY = 'Sapling_word_cache';
 let wordCache = new Map();
 const tooltipManager = new TooltipManager();
 let processingGeneration = 0;
@@ -87,6 +87,7 @@ async function loadWordCache() {
         if (lastError) {
           if (!isContextInvalidated(lastError)) {
             console.warn('[Sapling] Cache read failed:', lastError);
+            console.warn('[Sapling] Cache read failed:', lastError);
           }
           return resolve(wordCache);
         }
@@ -108,6 +109,7 @@ async function loadWordCache() {
       });
     } catch (error) {
       if (!isContextInvalidated(error)) {
+        console.warn('[Sapling] Cache read threw:', error);
         console.warn('[Sapling] Cache read threw:', error);
       }
       resolve(wordCache);
@@ -131,6 +133,7 @@ async function saveWordCache() {
             return resolve();
           }
           console.error('[Sapling] Failed to save cache:', lastError);
+          console.error('[Sapling] Failed to save cache:', lastError);
           return reject(lastError);
         }
         resolve();
@@ -139,6 +142,7 @@ async function saveWordCache() {
       if (isContextInvalidated(error)) {
         return resolve();
       }
+      console.error('[Sapling] Failed to save cache (threw):', error);
       console.error('[Sapling] Failed to save cache (threw):', error);
       reject(error);
     }
@@ -158,6 +162,7 @@ function removeWordCacheFromStorage() {
       chrome.storage.local.remove(WORD_CACHE_STORAGE_KEY, () => resolve());
     } catch (error) {
       if (!isContextInvalidated(error)) {
+        console.warn('[Sapling] Cache remove threw:', error);
         console.warn('[Sapling] Cache remove threw:', error);
       }
       resolve();
@@ -235,6 +240,7 @@ async function updateStats(stats) {
         if (readError) {
           if (!isContextInvalidated(readError)) {
             console.warn('[Sapling] Stats read failed:', readError);
+            console.warn('[Sapling] Stats read failed:', readError);
           }
           return resolve(null);
         }
@@ -258,6 +264,7 @@ async function updateStats(stats) {
             if (writeError) {
               if (!isContextInvalidated(writeError)) {
                 console.warn('[Sapling] Stats write failed:', writeError);
+                console.warn('[Sapling] Stats write failed:', writeError);
               }
               return resolve(null);
             }
@@ -266,12 +273,14 @@ async function updateStats(stats) {
         } catch (error) {
           if (!isContextInvalidated(error)) {
             console.warn('[Sapling] Stats write threw:', error);
+            console.warn('[Sapling] Stats write threw:', error);
           }
           resolve(null);
         }
       });
     } catch (error) {
       if (!isContextInvalidated(error)) {
+        console.warn('[Sapling] Stats read threw:', error);
         console.warn('[Sapling] Stats read threw:', error);
       }
       resolve(null);
@@ -297,6 +306,7 @@ async function addToWhitelist(original, translation, difficulty) {
       } catch (error) {
         if (!isContextInvalidated(error)) {
           console.warn('[Sapling] Whitelist save threw:', error);
+          console.warn('[Sapling] Whitelist save threw:', error);
         }
         resolve();
       }
@@ -306,6 +316,7 @@ async function addToWhitelist(original, translation, difficulty) {
 
 async function addToMemorizeList(word) {
   if (!word || !word.trim()) {
+    console.warn('[Sapling] Invalid word for memorize list:', word);
     console.warn('[Sapling] Invalid word for memorize list:', word);
     return;
   }
@@ -323,6 +334,7 @@ async function addToMemorizeList(word) {
         chrome.storage.sync.set({ memorizeList: list }, () => resolve());
       } catch (error) {
         if (!isContextInvalidated(error)) {
+          console.warn('[Sapling] Memorize list save threw:', error);
           console.warn('[Sapling] Memorize list save threw:', error);
         }
         resolve();
@@ -349,10 +361,12 @@ async function addToMemorizeList(word) {
           showToast(`"${trimmedWord}" 已添加到记忆列表`);
         } catch (error) {
           console.error('[Sapling] Error translating word:', trimmedWord, error);
+          console.error('[Sapling] Error translating word:', trimmedWord, error);
           showToast(`"${trimmedWord}" 已添加到记忆列表`);
         }
       }
     } catch (error) {
+      console.error('[Sapling] Error processing word:', trimmedWord, error);
       console.error('[Sapling] Error processing word:', trimmedWord, error);
       showToast(`"${trimmedWord}" 已添加到记忆列表`);
     }
@@ -394,7 +408,7 @@ function restoreAllMatchingOriginal(original) {
   if (!normalized) return 0;
 
   let restored = 0;
-  document.querySelectorAll('.vocabmeld-translated').forEach((el) => {
+  document.querySelectorAll('.Sapling-translated').forEach((el) => {
     const dataOriginal = el.getAttribute('data-original') || '';
     if (dataOriginal.trim().toLowerCase() !== normalized) return;
     restoreOriginal(el);
@@ -406,8 +420,8 @@ function restoreAllMatchingOriginal(original) {
 
 function restoreAll() {
   processingGeneration++;
-  document.querySelectorAll('.vocabmeld-processing').forEach(el => {
-    el.classList.remove('vocabmeld-processing');
+  document.querySelectorAll('.Sapling-processing').forEach(el => {
+    el.classList.remove('Sapling-processing');
   });
   textReplacer.restoreAll();
   contentSegmenter.clearProcessed();
@@ -440,7 +454,7 @@ async function processSpecificWords(targetWords) {
 
   // 检查已翻译的元素
   const alreadyTranslated = [];
-  document.querySelectorAll('.vocabmeld-translated').forEach(el => {
+  document.querySelectorAll('.Sapling-translated').forEach(el => {
     const original = el.getAttribute('data-original');
     if (original && targetWordSet.has(original.toLowerCase())) {
       alreadyTranslated.push(original.toLowerCase());
@@ -457,7 +471,7 @@ async function processSpecificWords(targetWords) {
       if (SKIP_TAGS.includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
 
       const classList = parent.classList;
-      if (classList && SKIP_CLASSES.some(cls => cls !== 'vocabmeld-translated' && classList.contains(cls))) {
+      if (classList && SKIP_CLASSES.some(cls => cls !== 'Sapling-translated' && classList.contains(cls))) {
         return NodeFilter.FILTER_REJECT;
       }
 
@@ -520,8 +534,8 @@ async function processSpecificWords(targetWords) {
       const path = getElementPath(container);
       const fingerprint = generateFingerprint(contextText, path);
 
-      const isProcessed = container.hasAttribute('data-vocabmeld-processed') ||
-                         container.closest('[data-vocabmeld-processed]');
+      const isProcessed = container.hasAttribute('data-Sapling-processed') ||
+                         container.closest('[data-Sapling-processed]');
 
       segments.push({
         element: container,
@@ -594,6 +608,7 @@ async function processPage(viewportOnly = false) {
         processed += memorizeCount;
       } catch (e) {
         console.error('[Sapling] Error processing memorize list:', e);
+        console.error('[Sapling] Error processing memorize list:', e);
         errors++;
       }
     }
@@ -625,7 +640,7 @@ async function processPage(viewportOnly = false) {
         const result = await translateText(segment.filteredText);
 
         if (runGeneration !== processingGeneration) {
-          el.classList.remove('vocabmeld-processing');
+          el.classList.remove('Sapling-processing');
           return { count: 0, error: false, aborted: true };
         }
 
@@ -641,9 +656,9 @@ async function processPage(viewportOnly = false) {
         if (result.async) {
           // 只有在没有立即替换结果时，才显示“处理中”高亮，避免缓存命中时出现长时间绿色背景。
           if (immediateCount === 0) {
-            el.classList.add('vocabmeld-processing');
+            el.classList.add('Sapling-processing');
           } else {
-            el.classList.remove('vocabmeld-processing');
+            el.classList.remove('Sapling-processing');
           }
 
           result.async.then(async (asyncReplacements) => {
@@ -652,7 +667,7 @@ async function processPage(viewportOnly = false) {
               if (asyncReplacements?.length) {
                 // 获取已替换的词汇，避免重复
                 const alreadyReplaced = new Set();
-                el.querySelectorAll('.vocabmeld-translated').forEach(transEl => {
+                el.querySelectorAll('.Sapling-translated').forEach(transEl => {
                   const original = transEl.getAttribute('data-original');
                   if (original) {
                     alreadyReplaced.add(original.toLowerCase());
@@ -670,20 +685,20 @@ async function processPage(viewportOnly = false) {
                 }
               }
             } finally {
-              el.classList.remove('vocabmeld-processing');
+              el.classList.remove('Sapling-processing');
             }
           }).catch(error => {
             console.error('[Sapling] Async translation error:', error);
-            el.classList.remove('vocabmeld-processing');
+            el.classList.remove('Sapling-processing');
           });
         } else {
-          el.classList.remove('vocabmeld-processing');
+          el.classList.remove('Sapling-processing');
         }
 
         return { count: immediateCount, error: false };
       } catch (e) {
         console.error('[Sapling] Segment error:', e);
-        el.classList.remove('vocabmeld-processing');
+        el.classList.remove('Sapling-processing');
         return { count: 0, error: true };
       }
     }
@@ -710,30 +725,30 @@ async function processPage(viewportOnly = false) {
 function setupEventListeners() {
   // 悬停显示提示
   document.addEventListener('mouseover', (e) => {
-    const target = e.target.closest('.vocabmeld-translated');
+    const target = e.target.closest('.Sapling-translated');
     if (target) {
       tooltipManager.show(target);
     }
-    if (e.target.closest('.vocabmeld-tooltip')) {
+    if (e.target.closest('.Sapling-tooltip')) {
       tooltipManager.cancelHide();
     }
   });
 
   document.addEventListener('mouseout', (e) => {
-    const target = e.target.closest('.vocabmeld-translated');
+    const target = e.target.closest('.Sapling-translated');
     const relatedTarget = e.relatedTarget;
 
     if (target &&
-        !relatedTarget?.closest('.vocabmeld-translated') &&
-        !relatedTarget?.closest('.vocabmeld-tooltip')) {
+        !relatedTarget?.closest('.Sapling-translated') &&
+        !relatedTarget?.closest('.Sapling-tooltip')) {
       tooltipManager.hide();
     }
   });
 
   document.addEventListener('mouseout', (e) => {
-    if (e.target.closest('.vocabmeld-tooltip') &&
-        !e.relatedTarget?.closest('.vocabmeld-tooltip') &&
-        !e.relatedTarget?.closest('.vocabmeld-translated')) {
+    if (e.target.closest('.Sapling-tooltip') &&
+        !e.relatedTarget?.closest('.Sapling-tooltip') &&
+        !e.relatedTarget?.closest('.Sapling-translated')) {
       tooltipManager.hide();
     }
   });
@@ -742,7 +757,7 @@ function setupEventListeners() {
   document.addEventListener('click', async (e) => {
     if (e.button !== 0) return;
 
-    const actionBtn = e.target.closest('.vocabmeld-action-btn');
+    const actionBtn = e.target.closest('.Sapling-action-btn');
     const currentElement = tooltipManager.getCurrentElement();
 
     if (actionBtn && currentElement) {
@@ -779,7 +794,7 @@ function setupEventListeners() {
 
     // 左键点击被替换的单词：直接发音（无需点击 tooltip 的发音按钮）
     if (config?.allowLeftClickPronunciation === false) return;
-    const clickedWord = e.target.closest('.vocabmeld-translated');
+    const clickedWord = e.target.closest('.Sapling-translated');
     if (!clickedWord) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
 
@@ -866,6 +881,7 @@ function setupEventListeners() {
           sendResponse({ success: true, count });
         }).catch(error => {
           console.error('[Sapling] Error processing specific words:', error);
+          console.error('[Sapling] Error processing specific words:', error);
           sendResponse({ success: false, error: error.message });
         });
         return true;
@@ -874,8 +890,8 @@ function setupEventListeners() {
       }
     }
     if (message.action === 'getStatus') {
-      const hasTranslations = !!document.querySelector('.vocabmeld-translated');
-      const hasProcessedMarkers = !!document.querySelector('[data-vocabmeld-processed]');
+      const hasTranslations = !!document.querySelector('.Sapling-translated');
+      const hasProcessedMarkers = !!document.querySelector('[data-Sapling-processed]');
       sendResponse({
         processed: contentSegmenter.getProcessedCount(),
         hasTranslations,
@@ -919,6 +935,7 @@ async function init() {
     setTimeout(() => processPage(), 1000);
   }
 
+  console.log('[Sapling] 初始化完成 (模块化重构版)');
   console.log('[Sapling] 初始化完成 (模块化重构版)');
 }
 

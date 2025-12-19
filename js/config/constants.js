@@ -38,8 +38,8 @@ export const SKIP_TAGS = [
  * 需要跳过处理的 CSS 类名
  */
 export const SKIP_CLASSES = [
-  'vocabmeld-translated',
-  'vocabmeld-tooltip',
+  'Sapling-translated',
+  'Sapling-tooltip',
   'hljs',
   'code',
   'syntax'

@@ -294,8 +294,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     filterMemorizeWords();
     
     // 加载缓存
-    chrome.storage.local.get('vocabmeld_word_cache', (data) => {
-      const cache = data.vocabmeld_word_cache || [];
+    chrome.storage.local.get('Sapling_word_cache', (data) => {
+      const cache = data.Sapling_word_cache || [];
       lastKnownCacheSize = Array.isArray(cache) ? cache.length : 0;
       elements.cachedTabCount.textContent = cache.length;
       
@@ -447,11 +447,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function trimLocalCacheToMaxSize(maxSize) {
     const normalized = normalizeCacheMaxSize(maxSize);
     return new Promise((resolve) => {
-      chrome.storage.local.get('vocabmeld_word_cache', (data) => {
-        const cache = data.vocabmeld_word_cache || [];
+      chrome.storage.local.get('Sapling_word_cache', (data) => {
+        const cache = data.Sapling_word_cache || [];
         if (!Array.isArray(cache) || cache.length <= normalized) return resolve(false);
         const trimmed = cache.slice(-normalized);
-        chrome.storage.local.set({ vocabmeld_word_cache: trimmed }, () => resolve(true));
+        chrome.storage.local.set({ Sapling_word_cache: trimmed }, () => resolve(true));
       });
     });
   }
@@ -472,8 +472,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const hitRate = total > 0 ? Math.round((hits / total) * 100) : 0;
     elements.statHitRate.textContent = hitRate + '%';
     
-    chrome.storage.local.get('vocabmeld_word_cache', (data) => {
-      const cacheSize = (data.vocabmeld_word_cache || []).length;
+    chrome.storage.local.get('Sapling_word_cache', (data) => {
+      const cacheSize = (data.Sapling_word_cache || []).length;
       lastKnownCacheSize = cacheSize;
       renderCacheStatus(cacheSize, cacheMaxSize);
     });
@@ -863,7 +863,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           learnedWords: [],
           memorizeList: []
         });
-        chrome.storage.local.remove('vocabmeld_word_cache', () => {
+        chrome.storage.local.remove('Sapling_word_cache', () => {
           loadSettings();
           debouncedSave(200);
         });

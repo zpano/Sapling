@@ -424,7 +424,7 @@ class ContentSegmenter {
         const childEl = child;
         if (!inlineTextTags.has(childEl.tagName)) continue;
         if (this.shouldSkipNode(childEl)) continue;
-        if (childEl.closest?.('.vocabmeld-translated')) continue;
+        if (childEl.closest?.('.Sapling-translated')) continue;
 
         const t = childEl.textContent.trim();
         if (!t || isCodeText(t)) continue;
@@ -485,7 +485,7 @@ class ContentSegmenter {
       if (combined.length <= 10) return;
 
       const span = document.createElement('span');
-      span.setAttribute('data-vocabmeld-text-run', 'true');
+      span.setAttribute('data-Sapling-text-run', 'true');
       span.style.whiteSpace = 'inherit';
 
       element.insertBefore(span, nodes[0]);
@@ -511,7 +511,7 @@ class ContentSegmenter {
         const childEl = child;
 
         // 已经包装过的 run：作为分隔点，避免嵌套
-        if (childEl.hasAttribute?.('data-vocabmeld-text-run') || childEl.hasAttribute?.('data-vocabmeld-direct-run')) {
+        if (childEl.hasAttribute?.('data-Sapling-text-run') || childEl.hasAttribute?.('data-Sapling-direct-run')) {
           flush(runNodes);
           runNodes = [];
           continue;
@@ -525,7 +525,7 @@ class ContentSegmenter {
 
         // 直接内联元素：作为 run 的一部分
         if (inlineTextTags.has(childEl.tagName) && !this.shouldSkipNode(childEl)) {
-          if (!childEl.closest?.('.vocabmeld-translated')) {
+          if (!childEl.closest?.('.Sapling-translated')) {
             const t = childEl.textContent.trim();
             if (t && !isCodeText(t)) {
               runNodes.push(childEl);
@@ -561,7 +561,7 @@ class ContentSegmenter {
           if (!parent) return NodeFilter.FILTER_REJECT;
 
           // 跳过已替换的内容（包含其内部的 original/translation spans）
-          if (parent.closest?.('.vocabmeld-translated')) {
+          if (parent.closest?.('.Sapling-translated')) {
             return NodeFilter.FILTER_REJECT;
           }
 

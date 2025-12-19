@@ -62,14 +62,14 @@ class TextReplacer {
         if (!parent) return NodeFilter.FILTER_REJECT;
 
         // 跳过已替换的内容（包含其内部 original/translation spans）
-        if (parent.closest?.('.vocabmeld-translated')) {
+        if (parent.closest?.('.Sapling-translated')) {
           return NodeFilter.FILTER_REJECT;
         }
 
         if (SKIP_TAGS.includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
 
         const classList = parent.classList;
-        if (classList && SKIP_CLASSES.some(cls => cls !== 'vocabmeld-translated' && classList.contains(cls))) {
+        if (classList && SKIP_CLASSES.some(cls => cls !== 'Sapling-translated' && classList.contains(cls))) {
           return NodeFilter.FILTER_REJECT;
         }
 
@@ -117,7 +117,7 @@ class TextReplacer {
       if (child.nodeType === Node.ELEMENT_NODE) {
         const childEl = child;
         if (!TextReplacer.INLINE_TEXT_TAGS.has(childEl.tagName)) continue;
-        if (childEl.closest?.('.vocabmeld-translated')) continue;
+        if (childEl.closest?.('.Sapling-translated')) continue;
         nodes.push(...this.getTextNodes(childEl));
       }
     }
@@ -144,7 +144,7 @@ class TextReplacer {
    */
   createReplacementElement(original, translation, phonetic, difficulty, partOfSpeech = '', shortDefinition = '', sourceLang = '', example = '') {
     const wrapper = document.createElement('span');
-    wrapper.className = 'vocabmeld-translated';
+    wrapper.className = 'Sapling-translated';
     wrapper.setAttribute('data-original', original);
     wrapper.setAttribute('data-translation', translation);
     wrapper.setAttribute('data-phonetic', phonetic || '');
@@ -160,14 +160,14 @@ class TextReplacer {
 
     switch (style) {
       case 'translation-only':
-        innerHTML = `<span class="vocabmeld-word">${translation}</span>`;
+        innerHTML = `<span class="Sapling-word">${translation}</span>`;
         break;
       case 'original-translation':
-        innerHTML = `<span class="vocabmeld-original">${original}</span><span class="vocabmeld-word">(${translation})</span>`;
+        innerHTML = `<span class="Sapling-original">${original}</span><span class="Sapling-word">(${translation})</span>`;
         break;
       case 'translation-original':
       default:
-        innerHTML = `<span class="vocabmeld-word">${translation}</span><span class="vocabmeld-original">(${original})</span>`;
+        innerHTML = `<span class="Sapling-word">${translation}</span><span class="Sapling-original">(${original})</span>`;
         break;
     }
 
@@ -239,7 +239,7 @@ class TextReplacer {
           let parent = textNode.parentElement;
           let isAlreadyReplaced = false;
           while (parent && parent !== element) {
-            if (parent.classList?.contains('vocabmeld-translated')) {
+            if (parent.classList?.contains('Sapling-translated')) {
               isAlreadyReplaced = true;
               break;
             }
@@ -269,7 +269,7 @@ class TextReplacer {
    * @param {Element} element - 替换元素
    */
   restoreOriginal(element) {
-    if (!element.classList?.contains('vocabmeld-translated')) return;
+    if (!element.classList?.contains('Sapling-translated')) return;
     const original = element.getAttribute('data-original');
     const textNode = document.createTextNode(original);
     element.parentNode.replaceChild(textNode, element);
@@ -280,11 +280,11 @@ class TextReplacer {
    * @param {Element} root - 根元素
    */
   restoreAll(root = document.body) {
-    root.querySelectorAll('.vocabmeld-translated').forEach(el => this.restoreOriginal(el));
-    root.querySelectorAll('[data-vocabmeld-processed]').forEach(el => el.removeAttribute('data-vocabmeld-processed'));
+    root.querySelectorAll('.Sapling-translated').forEach(el => this.restoreOriginal(el));
+    root.querySelectorAll('[data-Sapling-processed]').forEach(el => el.removeAttribute('data-Sapling-processed'));
 
     // Unwrap internal text-run wrappers created for mixed-content containers.
-    root.querySelectorAll('[data-vocabmeld-text-run],[data-vocabmeld-direct-run]').forEach(el => {
+    root.querySelectorAll('[data-Sapling-text-run],[data-Sapling-direct-run]').forEach(el => {
       const parent = el.parentNode;
       if (!parent) return;
       while (el.firstChild) parent.insertBefore(el.firstChild, el);

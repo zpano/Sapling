@@ -43,7 +43,7 @@ export class TooltipManager {
     if (this.tooltip) return;
 
     this.tooltip = document.createElement('div');
-    this.tooltip.className = 'vocabmeld-tooltip';
+    this.tooltip.className = 'Sapling-tooltip';
     this.tooltip.style.display = 'none';
     document.body.appendChild(this.tooltip);
   }
@@ -53,7 +53,7 @@ export class TooltipManager {
    * @param {HTMLElement} element - 翻译元素
    */
   async show(element) {
-    if (!this.tooltip || !element.classList?.contains('vocabmeld-translated')) return;
+    if (!this.tooltip || !element.classList?.contains('Sapling-translated')) return;
 
     // 取消待处理的隐藏操作
     if (this.tooltipHideTimeout) {
@@ -187,15 +187,15 @@ export class TooltipManager {
     const safeDifficulty = this.escapeHtml(difficulty);
 
     const safePhoneticHtml = safePhonetic
-      ? `<div class="vocabmeld-tooltip-phonetic">${safePhonetic}</div>`
+      ? `<div class="Sapling-tooltip-phonetic">${safePhonetic}</div>`
       : '';
 
     const safePosHtml = safePartOfSpeech
-      ? `<span class="vocabmeld-tooltip-pos">${safePartOfSpeech}</span>`
+      ? `<span class="Sapling-tooltip-pos">${safePartOfSpeech}</span>`
       : '';
 
     const safeDefinitionHtml = safeShortDefinition
-      ? `<div class="vocabmeld-tooltip-definition">${safePosHtml}${safeShortDefinition}</div>`
+      ? `<div class="Sapling-tooltip-definition">${safePosHtml}${safeShortDefinition}</div>`
       : '';
 
     let safeExamplesHtml = '';
@@ -204,31 +204,31 @@ export class TooltipManager {
     const safeAiExample = this.escapeHtml(aiExample);
 
     if (safeWiktionaryExample) {
-      examples.push(`<div class="vocabmeld-tooltip-example">${safeWiktionaryExample}</div>`);
+      examples.push(`<div class="Sapling-tooltip-example">${safeWiktionaryExample}</div>`);
     }
 
     if (safeAiExample) {
       const alreadyMarked = /\(AI\)\s*$/.test(String(aiExample || ''));
-      examples.push(`<div class="vocabmeld-tooltip-example">${safeAiExample}${alreadyMarked ? '' : ' (AI)'}</div>`);
+      examples.push(`<div class="Sapling-tooltip-example">${safeAiExample}${alreadyMarked ? '' : ' (AI)'}</div>`);
     }
 
     if (isLoading) {
-      safeExamplesHtml = `<div class="vocabmeld-tooltip-examples">${examples.join('')}<div class="vocabmeld-tooltip-dict-loading">Loading...</div></div>`;
+      safeExamplesHtml = `<div class="Sapling-tooltip-examples">${examples.join('')}<div class="Sapling-tooltip-dict-loading">Loading...</div></div>`;
     } else if (examples.length > 0) {
-      safeExamplesHtml = `<div class="vocabmeld-tooltip-examples">${examples.join('')}</div>`;
+      safeExamplesHtml = `<div class="Sapling-tooltip-examples">${examples.join('')}</div>`;
     }
 
     this.tooltip.innerHTML = `
-      <div class="vocabmeld-tooltip-header">
-        <span class="vocabmeld-tooltip-word">${safeLearningWord}${safeNativeTranslation ? ` <span class="vocabmeld-tooltip-translation">(${safeNativeTranslation})</span>` : ''}</span>
-        ${safeDifficulty ? `<span class="vocabmeld-tooltip-badge">${safeDifficulty}</span>` : ''}
+      <div class="Sapling-tooltip-header">
+        <span class="Sapling-tooltip-word">${safeLearningWord}${safeNativeTranslation ? ` <span class="Sapling-tooltip-translation">(${safeNativeTranslation})</span>` : ''}</span>
+        ${safeDifficulty ? `<span class="Sapling-tooltip-badge">${safeDifficulty}</span>` : ''}
       </div>
       ${safePhoneticHtml}
-      <div class="vocabmeld-tooltip-original">Original: ${safeOriginalWord}</div>
+      <div class="Sapling-tooltip-original">Original: ${safeOriginalWord}</div>
       ${safeDefinitionHtml}
       ${safeExamplesHtml}
-      <div class="vocabmeld-tooltip-actions">
-        <button class="vocabmeld-action-btn vocabmeld-btn-speak" data-action="speak" title="Pronounce">
+      <div class="Sapling-tooltip-actions">
+        <button class="Sapling-action-btn Sapling-btn-speak" data-action="speak" title="Pronounce">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
             <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
@@ -236,13 +236,13 @@ export class TooltipManager {
           </svg>
           <span>发音</span>
         </button>
-        <button class="vocabmeld-action-btn vocabmeld-btn-memorize" data-action="memorize" title="Add to memorize list">
+        <button class="Sapling-action-btn Sapling-btn-memorize" data-action="memorize" title="Add to memorize list">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 5v14M5 12h14"></path>
           </svg>
           <span>记忆</span>
         </button>
-        <button class="vocabmeld-action-btn vocabmeld-btn-learned" data-action="learned" title="标记为已学会">
+        <button class="Sapling-action-btn Sapling-btn-learned" data-action="learned" title="标记为已学会">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>

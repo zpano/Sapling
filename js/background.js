@@ -38,8 +38,8 @@ async function sendToOffscreen(message) {
   throw lastError || new Error('Failed to send message to offscreen document');
 }
 
-const MENU_ID_ADD_MEMORIZE = 'vocabmeld-add-memorize';
-const MENU_ID_TOGGLE_PAGE = 'vocabmeld-process-page';
+const MENU_ID_ADD_MEMORIZE = 'Sapling-add-memorize';
+const MENU_ID_TOGGLE_PAGE = 'Sapling-process-page';
 
 // 安装/更新时初始化
 chrome.runtime.onInstalled.addListener((details) => {
@@ -288,8 +288,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   // 获取缓存统计
   if (message.action === 'getCacheStats') {
-    chrome.storage.local.get('vocabmeld_word_cache', (result) => {
-      const cache = result.vocabmeld_word_cache || [];
+    chrome.storage.local.get('Sapling_word_cache', (result) => {
+      const cache = result.Sapling_word_cache || [];
       chrome.storage.sync.get('cacheMaxSize', (cfg) => {
         const maxSize = normalizeCacheMaxSize(cfg.cacheMaxSize, CACHE_CONFIG.maxSize);
         sendResponse({
@@ -303,7 +303,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   // 清空缓存
   if (message.action === 'clearCache') {
-    chrome.storage.local.remove('vocabmeld_word_cache', () => {
+    chrome.storage.local.remove('Sapling_word_cache', () => {
       chrome.storage.sync.set({ cacheHits: 0, cacheMisses: 0 }, () => {
         sendResponse({ success: true });
       });

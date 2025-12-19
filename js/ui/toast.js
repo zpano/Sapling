@@ -9,12 +9,12 @@
  */
 export function showToast(message) {
   const toast = document.createElement('div');
-  toast.className = 'vocabmeld-toast';
+  toast.className = 'Sapling-toast';
   toast.textContent = message;
   document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add('vocabmeld-toast-show'), 10);
+  setTimeout(() => toast.classList.add('Sapling-toast-show'), 10);
   setTimeout(() => {
-    toast.classList.remove('vocabmeld-toast-show');
+    toast.classList.remove('Sapling-toast-show');
     setTimeout(() => toast.remove(), 300);
   }, 2000);
 }

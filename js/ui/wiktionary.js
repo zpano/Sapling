@@ -7,7 +7,7 @@
 const dictionaryCache = new Map();
 
 // 持久化缓存（跨页面刷新生效）
-const PERSISTENT_CACHE_STORAGE_KEY = 'vocabmeld_wiktionary_cache';
+const PERSISTENT_CACHE_STORAGE_KEY = 'Sapling_wiktionary_cache';
 const PERSISTENT_CACHE_MAX_SIZE = 800;
 let persistentCache = null; // Map<cacheKey, { value: object|null, cachedAt: number }>
 let persistentCacheInitPromise = null;

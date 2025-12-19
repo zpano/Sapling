@@ -1,125 +1,81 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Generate Sapling Icons</title>
+  <title>Sapling Icon - Balanced</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #1e293b; color: white; }
-    .icon-grid { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 20px; }
+    body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; background: #f1f5f9; }
+    .icon-grid { display: flex; gap: 40px; flex-wrap: wrap; align-items: center; margin-bottom: 40px; }
     .icon-item { text-align: center; }
-    canvas { background: transparent; border: 1px solid #334155; border-radius: 8px; }
-    button { margin-top: 10px; padding: 10px 20px; cursor: pointer; }
-    .download-links { margin-top: 20px; }
-    .download-links a { color: #818cf8; margin-right: 15px; }
+    .label { margin-top: 12px; font-size: 13px; color: #64748b; font-family: monospace; }
+    button { 
+      padding: 12px 28px; background: #76b8ac; color: white; border: none; 
+      border-radius: 8px; cursor: pointer; font-weight: 600; 
+      box-shadow: 0 4px 12px rgba(118, 184, 172, 0.4);
+    }
+    button:hover { background: #65a398; }
+    svg { border-radius: 50%; background: #fff; }
   </style>
 </head>
 <body>
-  <h1>Sapling Icon Generator</h1>
-  <p>点击按钮生成并下载图标文件</p>
+  <h1>Sapling Icon</h1>
   
   <div class="icon-grid" id="iconGrid"></div>
-  
-  <button onclick="downloadAll()">下载所有图标</button>
-  <div class="download-links" id="downloadLinks"></div>
+  <button onclick="downloadAll()">下载 icon${size}.png</button>
 
   <script>
-    const sizes = [16, 32, 48, 128];
+    const sizes = [16, 32, 48, 128, 512];
     const iconGrid = document.getElementById('iconGrid');
-    const downloadLinks = document.getElementById('downloadLinks');
-    
-    function drawIcon(ctx, size) {
-      const scale = size / 128;
+
+    function getSvgString(size) {
+      // 兼顾纤细感与小像素清晰度
+      const strokeW = size <= 32 ? 4 : 3; 
       
-      // 渐变背景
-      const gradient = ctx.createLinearGradient(0, 0, size, size);
-      gradient.addColorStop(0, '#6366f1');
-      gradient.addColorStop(0.5, '#8b5cf6');
-      gradient.addColorStop(1, '#a855f7');
-      
-      // 绘制圆形背景
-      ctx.beginPath();
-      ctx.arc(size/2, size/2, size/2 - 2*scale, 0, Math.PI * 2);
-      ctx.fillStyle = gradient;
-      ctx.fill();
-      
-      // 内部光晕
-      ctx.beginPath();
-      ctx.arc(size/2, size/2, size/2 - 10*scale, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-      ctx.lineWidth = 2 * scale;
-      ctx.stroke();
-      
-      // 绘制 V 字母
-      ctx.strokeStyle = '#fef3c7';
-      ctx.lineWidth = 6 * scale;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      
-      ctx.beginPath();
-      ctx.moveTo(28 * scale, 30 * scale);
-      ctx.lineTo(48 * scale, 80 * scale);
-      ctx.lineTo(64 * scale, 55 * scale);
-      ctx.lineTo(80 * scale, 80 * scale);
-      ctx.lineTo(100 * scale, 30 * scale);
-      ctx.stroke();
-      
-      // 绘制 M 字母
-      ctx.lineWidth = 4 * scale;
-      ctx.beginPath();
-      ctx.moveTo(44 * scale, 95 * scale);
-      ctx.lineTo(44 * scale, 78 * scale);
-      ctx.lineTo(58 * scale, 88 * scale);
-      ctx.lineTo(72 * scale, 78 * scale);
-      ctx.lineTo(72 * scale, 95 * scale);
-      ctx.stroke();
-      
-      // 星点装饰
-      ctx.fillStyle = '#fef3c7';
-      ctx.globalAlpha = 0.8;
-      ctx.beginPath();
-      ctx.arc(98 * scale, 25 * scale, 3 * scale, 0, Math.PI * 2);
-      ctx.fill();
-      
-      ctx.globalAlpha = 0.6;
-      ctx.beginPath();
-      ctx.arc(25 * scale, 45 * scale, 2 * scale, 0, Math.PI * 2);
-      ctx.fill();
-      
-      ctx.globalAlpha = 0.7;
-      ctx.beginPath();
-      ctx.arc(100 * scale, 65 * scale, 2.5 * scale, 0, Math.PI * 2);
-      ctx.fill();
-      
-      ctx.globalAlpha = 1;
+      return `
+      <svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="50" fill="#76b8ac" />
+        
+        <g transform="translate(50, 52) scale(1.1) translate(-50, -50)">
+          <path d="M50,45 Q26,45 26,32 Q45,28 50,45" fill="#add65c" />
+          <path d="M50,45 Q74,42 74,32 Q55,28 50,45" fill="#add65c" />
+          
+          <path d="M22,70 L46,70 Q50,70 50,60 L50,45 M50,60 Q50,70 54,70 L78,70" 
+                fill="none" stroke="#8d5b3e" stroke-width="${strokeW}" stroke-linecap="round" stroke-linejoin="round" />
+          
+          <rect x="74" y="64" width="2.5" height="2.5" fill="#8d5b3e" />
+        </g>
+      </svg>`;
     }
-    
-    // 生成所有尺寸的图标
+
     sizes.forEach(size => {
       const item = document.createElement('div');
       item.className = 'icon-item';
-      
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      canvas.id = 'icon' + size;
-      
-      const ctx = canvas.getContext('2d');
-      drawIcon(ctx, size);
-      
-      const label = document.createElement('p');
-      label.textContent = size + 'x' + size;
-      
-      item.appendChild(canvas);
-      item.appendChild(label);
+      item.innerHTML = getSvgString(size) + `<div class="label">icon${size}.png</div>`;
       iconGrid.appendChild(item);
     });
-    
+
     function downloadAll() {
-      sizes.forEach(size => {
-        const canvas = document.getElementById('icon' + size);
-        const link = document.createElement('a');
-        link.download = 'icon' + size + '.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+      const svgs = iconGrid.querySelectorAll('svg');
+      svgs.forEach((svgElement) => {
+        const size = svgElement.getAttribute('width');
+        const xml = new XMLSerializer().serializeToString(svgElement);
+        const svg64 = btoa(unescape(encodeURIComponent(xml)));
+        const img = new Image();
+        
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, size, size);
+          
+          const link = document.createElement('a');
+          link.download = `icon${size}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        };
+        img.src = 'data:image/svg+xml;base64,' + svg64;
       });
     }
   </script>

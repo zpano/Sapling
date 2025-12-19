@@ -1,7 +1,7 @@
 /* Sapling Content 样式 - 注入到页面中 */
 
 /* 动画定义 */
-@keyframes vocabmeld-tooltip-in {
+@keyframes Sapling-tooltip-in {
   from {
     opacity: 0;
     transform: translateY(4px);
@@ -13,33 +13,33 @@
 }
 
 /* 悬停效果 */
-.vocabmeld-translated:hover {
+.Sapling-translated:hover {
   background: rgba(99, 102, 241, 0.15) !important;
 }
 
 /* 正在处理中的段落高亮 */
-.vocabmeld-processing {
+.Sapling-processing {
   background: rgba(52, 211, 153, 0.12) !important;
   transition: background 0.3s ease !important;
 }
 
 /* 暗色主题适配 */
 @media (prefers-color-scheme: dark) {
-  .vocabmeld-translated .vocabmeld-word {
+  .Sapling-translated .Sapling-word {
     color: #818cf8 !important;
   }
   
-  .vocabmeld-translated .vocabmeld-original {
+  .Sapling-translated .Sapling-original {
     color: #94a3b8 !important;
   }
   
-  .vocabmeld-translated:hover {
+  .Sapling-translated:hover {
     background: rgba(129, 140, 248, 0.2) !important;
   }
 }
 
 /* Toast 显示状态 */
-.vocabmeld-toast {
+.Sapling-toast {
   bottom: 24px !important;
   left: 50% !important;
   transform: translateX(-50%) translateY(100px) !important;
@@ -47,13 +47,13 @@
   transition: all 0.3s ease !important;
 }
 
-.vocabmeld-toast-show {
+.Sapling-toast-show {
   transform: translateX(-50%) translateY(0) !important;
   opacity: 1 !important;
 }
 
 /* 确保样式不被覆盖 - 使用 !important 覆盖页面样式 */
-.vocabmeld-translated {
+.Sapling-translated {
   position: relative !important;
   display: inline !important;
   cursor: pointer !important;
@@ -63,7 +63,7 @@
   vertical-align: baseline !important;
 }
 
-.vocabmeld-translated .vocabmeld-word {
+.Sapling-translated .Sapling-word {
   color: #6366f1 !important;
   font-weight: 500 !important;
   text-decoration: underline !important;
@@ -71,24 +71,24 @@
   text-underline-offset: 2px !important;
 }
 
-.vocabmeld-translated .vocabmeld-original {
+.Sapling-translated .Sapling-original {
   margin-left: 2px !important;
 }
 
 /* original-translation 模式下保留原文字体/颜色 */
-.vocabmeld-translated[data-style="original-translation"] .vocabmeld-original {
+.Sapling-translated[data-style="original-translation"] .Sapling-original {
   color: inherit !important;
   font-size: inherit !important;
   font-weight: inherit !important;
 }
 
 /* translation-original 模式下，原文弱化显示 */
-.vocabmeld-translated[data-style="translation-original"] .vocabmeld-original {
+.Sapling-translated[data-style="translation-original"] .Sapling-original {
   color: #64748b !important;
   font-size: 0.85em !important;
 }
 
-.vocabmeld-tooltip {
+.Sapling-tooltip {
   position: absolute !important;
   z-index: 2147483647 !important;
   background: #1e293b !important;
@@ -107,7 +107,7 @@
   pointer-events: auto !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-tooltip-header {
+.Sapling-tooltip .Sapling-tooltip-header {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
@@ -115,7 +115,7 @@
   padding: 0 !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-tooltip-word {
+.Sapling-tooltip .Sapling-tooltip-word {
   font-size: 18px !important;
   font-weight: 600 !important;
   color: #818cf8 !important;
@@ -123,13 +123,13 @@
   padding: 0 !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-tooltip-translation {
+.Sapling-tooltip .Sapling-tooltip-translation {
   font-size: 13px !important;
   font-weight: 500 !important;
   color: #cbd5e1 !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-tooltip-badge {
+.Sapling-tooltip .Sapling-tooltip-badge {
   display: inline-block !important;
   padding: 2px 8px !important;
   background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
@@ -140,7 +140,7 @@
   margin: 0 !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-tooltip-phonetic {
+.Sapling-tooltip .Sapling-tooltip-phonetic {
   color: #94a3b8 !important;
   font-size: 13px !important;
   margin-bottom: 6px !important;
@@ -148,48 +148,48 @@
   padding: 0 !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-tooltip-original {
+.Sapling-tooltip .Sapling-tooltip-original {
   color: #64748b !important;
   font-size: 13px !important;
   margin-bottom: 8px !important;
   padding: 0 !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-tooltip-dict {
+.Sapling-tooltip .Sapling-tooltip-dict {
   margin-top: 4px !important;
   margin-bottom: 4px !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-tooltip-definition {
+.Sapling-tooltip .Sapling-tooltip-definition {
   font-size: 13px !important;
   color: #e2e8f0 !important;
   margin: 2px 0 !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-tooltip-pos {
+.Sapling-tooltip .Sapling-tooltip-pos {
   text-transform: uppercase !important;
   font-size: 11px !important;
   color: #a5b4fc !important;
   margin-right: 6px !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-tooltip-example {
+.Sapling-tooltip .Sapling-tooltip-example {
   font-size: 12px !important;
   color: #94a3b8 !important;
   margin-top: 2px !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-tooltip-examples {
+.Sapling-tooltip .Sapling-tooltip-examples {
   margin-top: 6px !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-tooltip-dict-loading {
+.Sapling-tooltip .Sapling-tooltip-dict-loading {
   font-size: 12px !important;
   color: #64748b !important;
 }
 
 /* Tooltip 按钮区域 */
-.vocabmeld-tooltip .vocabmeld-tooltip-actions {
+.Sapling-tooltip .Sapling-tooltip-actions {
   display: flex !important;
   gap: 8px !important;
   padding-top: 10px !important;
@@ -197,7 +197,7 @@
   border-top: 1px solid #334155 !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-action-btn {
+.Sapling-tooltip .Sapling-action-btn {
   flex: 1 !important;
   display: flex !important;
   align-items: center !important;
@@ -215,38 +215,38 @@
   white-space: nowrap !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-action-btn:hover {
+.Sapling-tooltip .Sapling-action-btn:hover {
   background: #475569 !important;
   transform: translateY(-1px) !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-action-btn:active {
+.Sapling-tooltip .Sapling-action-btn:active {
   transform: translateY(0) !important;
 }
 
-.vocabmeld-tooltip .vocabmeld-action-btn svg {
+.Sapling-tooltip .Sapling-action-btn svg {
   flex-shrink: 0 !important;
 }
 
 /* 发音按钮 */
-.vocabmeld-tooltip .vocabmeld-btn-speak:hover {
+.Sapling-tooltip .Sapling-btn-speak:hover {
   background: #3b82f6 !important;
   color: white !important;
 }
 
 /* 记忆按钮 */
-.vocabmeld-tooltip .vocabmeld-btn-memorize:hover {
+.Sapling-tooltip .Sapling-btn-memorize:hover {
   background: #f59e0b !important;
   color: white !important;
 }
 
 /* 已学会按钮 */
-.vocabmeld-tooltip .vocabmeld-btn-learned:hover {
+.Sapling-tooltip .Sapling-btn-learned:hover {
   background: #10b981 !important;
   color: white !important;
 }
 
-.vocabmeld-toast {
+.Sapling-toast {
   position: fixed !important;
   z-index: 2147483647 !important;
   background: #1e293b !important;
@@ -261,30 +261,30 @@
 
 /* 打印时隐藏 */
 @media print {
-  .vocabmeld-tooltip,
-  .vocabmeld-toast {
+  .Sapling-tooltip,
+  .Sapling-toast {
     display: none !important;
   }
 
-  .vocabmeld-translated .vocabmeld-word {
+  .Sapling-translated .Sapling-word {
     color: inherit;
     text-decoration: none;
   }
 
-  .vocabmeld-translated .vocabmeld-original {
+  .Sapling-translated .Sapling-original {
     display: none;
   }
 }
 
 /* 例句容器 */
-.vocabmeld-tooltip .vocabmeld-tooltip-examples {
+.Sapling-tooltip .Sapling-tooltip-examples {
   margin-top: 8px !important;
   padding-top: 8px !important;
   border-top: 1px solid #334155 !important;
 }
 
 /* AI 例句标签 */
-.vocabmeld-tooltip .vocabmeld-ai-label {
+.Sapling-tooltip .Sapling-ai-label {
   display: inline-block !important;
   padding: 1px 4px !important;
   margin-right: 6px !important;
@@ -298,6 +298,6 @@
 }
 
 /* AI 例句样式 */
-.vocabmeld-tooltip .vocabmeld-tooltip-ai-example {
+.Sapling-tooltip .Sapling-tooltip-ai-example {
   margin-top: 6px !important;
 }

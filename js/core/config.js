@@ -109,7 +109,7 @@ export const DEFAULT_CONFIG = {
 export const CACHE_CONFIG = {
   maxSize: 2048,
   maxSizeMax: 8192,
-  storageKey: 'vocabmeld_word_cache'
+  storageKey: 'Sapling_word_cache'
 };
 
 export const CACHE_SIZE_LIMITS = {
@@ -156,8 +156,8 @@ export const SKIP_TAGS = [
 
 // 需要跳过的类名
 export const SKIP_CLASSES = [
-  'vocabmeld-translated',
-  'vocabmeld-tooltip',
+  'Sapling-translated',
+  'Sapling-tooltip',
   'highlight-mengshen',
   'code',
   'syntax',
