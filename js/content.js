@@ -18,6 +18,35 @@ let wordCache = new Map();
 const tooltipManager = new TooltipManager();
 let processingGeneration = 0;
 
+function normalizeDomainEntry(entry) {
+  if (!entry) return '';
+  const trimmed = String(entry).trim().toLowerCase();
+  if (!trimmed) return '';
+  // 尝试用 URL 解析（支持用户粘贴完整链接）
+  try {
+    const url = new URL(trimmed);
+    return url.hostname;
+  } catch (_) {}
+  // 去掉常见前缀
+  return trimmed
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/\/.*$/, '');
+}
+
+function normalizeBlacklist(list) {
+  const items = Array.isArray(list) ? list : [];
+  return items
+    .map(normalizeDomainEntry)
+    .filter(Boolean);
+}
+
+function isHostnameBlacklisted(hostname, blacklistList) {
+  const normalizedHost = String(hostname || '').toLowerCase();
+  const normalizedList = normalizeBlacklist(blacklistList);
+  return normalizedList.some(domain => normalizedHost === domain || normalizedHost.endsWith('.' + domain));
+}
+
 // ============ 配置加载 ============
 async function loadConfig() {
   return new Promise((resolve) => {
@@ -44,6 +73,7 @@ async function loadConfig() {
         theme: { ...DEFAULT_THEME, ...(safeResult.theme || {}) },
         enabled: safeResult.enabled ?? true,
         blacklist: safeResult.blacklist || [],
+        blacklistNormalized: normalizeBlacklist(safeResult.blacklist),
         whitelist: safeResult.whitelist || [],
         learnedWords: safeResult.learnedWords || [],
         memorizeList: safeResult.memorizeList || []
@@ -591,7 +621,7 @@ async function processPage(viewportOnly = false) {
   if (!config?.enabled) return { processed: 0, disabled: true };
 
   const hostname = window.location.hostname;
-  if (config.blacklist?.some(domain => hostname.includes(domain))) {
+  if (isHostnameBlacklisted(hostname, config.blacklistNormalized || config.blacklist)) {
     // 保险：如果进入这里且已被替换过，先还原
     restoreAll();
     return { processed: 0, blacklisted: true };
@@ -812,7 +842,7 @@ function setupEventListeners() {
 
   // 滚动处理
   const handleScroll = debounce(() => {
-    if (config.blacklist?.some(domain => window.location.hostname.includes(domain))) return;
+    if (isHostnameBlacklisted(window.location.hostname, config.blacklistNormalized || config.blacklist)) return;
     if (config?.autoProcess && config?.enabled) {
       processPage(true);
     }
@@ -825,7 +855,7 @@ function setupEventListeners() {
       loadConfig().then(async () => {
         // 检查是否在黑名单中（动态变更）
         const hostname = window.location.hostname;
-        if (config.blacklist?.some(domain => hostname.includes(domain))) {
+        if (isHostnameBlacklisted(hostname, config.blacklistNormalized || config.blacklist)) {
           console.log('[Sapling] Site added to blacklist, restoring original content.');
           restoreAll();
           return;
@@ -882,7 +912,7 @@ function setupEventListeners() {
   // 监听来自 popup/background 的消息
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'processPage') {
-      if (config.blacklist?.some(domain => window.location.hostname.includes(domain))) {
+      if (isHostnameBlacklisted(window.location.hostname, config.blacklistNormalized || config.blacklist)) {
          console.log('[Sapling] Ignoring processPage request for blacklisted site');
          sendResponse({ processed: 0, blacklisted: true });
          return true;
@@ -943,7 +973,7 @@ async function init() {
 
   const hostname = window.location.hostname;
   console.log('[Sapling] Checking blacklist for:', hostname, 'Blacklist:', config.blacklist);
-  if (config.blacklist?.some(domain => hostname.includes(domain))) {
+  if (isHostnameBlacklisted(hostname, config.blacklistNormalized || config.blacklist)) {
     // 如果之前已经被替换过，确保还原
     restoreAll();
     console.log('[Sapling] Current site is blacklisted, stopping initialization.');
