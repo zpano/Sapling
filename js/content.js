@@ -923,6 +923,13 @@ function debounce(func, wait) {
 // ============ 初始化 ============
 async function init() {
   await loadConfig();
+
+  const hostname = window.location.hostname;
+  if (config.blacklist?.some(domain => hostname.includes(domain))) {
+    console.log('[Sapling] Current site is blacklisted, stopping initialization.');
+    return;
+  }
+
   await loadWordCache();
   await initLanguageDetector();
 
