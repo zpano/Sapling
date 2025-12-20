@@ -597,8 +597,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       youdaoPronunciationType: Number.parseInt(elements.youdaoPronunciationType.value, 10) === 1 ? 1 : 2,
       translationStyle: document.querySelector('input[name="translationStyle"]:checked')?.value || 'original-translation',
       theme: getThemeFromUI(),
-      blacklist: elements.blacklistInput.value.split('\n').filter(s => s.trim()),
-      whitelist: elements.whitelistInput.value.split('\n').filter(s => s.trim()),
+      blacklist: elements.blacklistInput.value.split('\n').map(s => s.trim()).filter(s => s),
+      whitelist: elements.whitelistInput.value.split('\n').map(s => s.trim()).filter(s => s),
       cacheMaxSize: normalizedCacheMaxSize,
       concurrencyLimit: normalizedConcurrencyLimit
     };
