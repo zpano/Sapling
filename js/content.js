@@ -592,6 +592,8 @@ async function processPage(viewportOnly = false) {
 
   const hostname = window.location.hostname;
   if (config.blacklist?.some(domain => hostname.includes(domain))) {
+    // 保险：如果进入这里且已被替换过，先还原
+    restoreAll();
     return { processed: 0, blacklisted: true };
   }
 
@@ -942,6 +944,8 @@ async function init() {
   const hostname = window.location.hostname;
   console.log('[Sapling] Checking blacklist for:', hostname, 'Blacklist:', config.blacklist);
   if (config.blacklist?.some(domain => hostname.includes(domain))) {
+    // 如果之前已经被替换过，确保还原
+    restoreAll();
     console.log('[Sapling] Current site is blacklisted, stopping initialization.');
     return;
   }
