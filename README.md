@@ -63,13 +63,25 @@ Sapling 从[VocabMeld](https://github.com/lzskyline/VocabMeld)二次开发而来
 
 ## 安装方法
 
-### 1. 加载扩展
+### 方式一：从 GitHub Releases 下载（推荐）
 
-1. 打开 Chrome 浏览器，访问 `chrome://extensions/`
-2. 开启右上角的"开发者模式"
-3. 点击"加载已解压的扩展程序"
-4. 选择 `Sapling` 文件夹
-4. 选择 `Sapling` 文件夹
+1. 访问 [Releases 页面](https://github.com/zpano/Sapling/releases)
+2. 下载最新的 `Sapling-x.x.x-xxxxxx.zip` 文件
+3. 解压下载的文件
+4. 打开 Chrome 浏览器，访问 `chrome://extensions/`
+5. 开启右上角的"开发者模式"
+6. 点击"加载已解压的扩展程序"
+7. 选择解压后的文件夹
+
+### 方式二：从源码安装（开发者）
+
+1. 克隆本仓库：`git clone https://github.com/zpano/Sapling.git`
+2. 进入项目目录：`cd Sapling`
+3. 安装依赖并构建：`npm install && npm run build`
+4. 打开 Chrome 浏览器，访问 `chrome://extensions/`
+5. 开启右上角的"开发者模式"
+6. 点击"加载已解压的扩展程序"
+7. 选择 `Sapling` 文件夹
 
 ### 2. 配置 API
 
