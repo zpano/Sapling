@@ -14,7 +14,10 @@ import { CEFR_LEVELS } from '../config/constants.js';
 export function isDifficultyCompatible(wordDifficulty, userDifficulty) {
   const wordIdx = CEFR_LEVELS.indexOf(wordDifficulty);
   const userIdx = CEFR_LEVELS.indexOf(userDifficulty);
-  return wordIdx >= userIdx;
+  // 边界处理：无效值默认使用 B1（索引 2）
+  const safeUserIdx = userIdx >= 0 ? userIdx : 2;
+  const safeWordIdx = wordIdx >= 0 ? wordIdx : 2;
+  return safeWordIdx >= safeUserIdx;
 }
 
 /**

@@ -269,7 +269,8 @@ class ApiService {
           nativeLanguage: config.nativeLanguage,
           learningLanguage: config.targetLanguage,
           aiTargetCount,
-          aiMaxCount
+          aiMaxCount,
+          userDifficultyLevel: config.difficultyLevel || 'B1'
         });
 
         const userPrompt = `${filteredText}`;

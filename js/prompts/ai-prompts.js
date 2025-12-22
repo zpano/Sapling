@@ -12,6 +12,7 @@
  * @param {string} params.learningLanguage - 用户学习语言
  * @param {number} params.aiTargetCount - AI 应返回的目标词汇数
  * @param {number} params.aiMaxCount - AI 最多返回的词汇数
+ * @param {string} params.userDifficultyLevel - 用户 CEFR 难度等级 (A1-C2)
  * @returns {string} 完整的提示词
  */
 export function buildVocabularySelectionPrompt({
@@ -20,7 +21,8 @@ export function buildVocabularySelectionPrompt({
   nativeLanguage,
   learningLanguage,
   aiTargetCount,
-  aiMaxCount
+  aiMaxCount,
+  userDifficultyLevel = 'B1'
 }) {
   // 判断学习语言的词汇在哪个字段
   const isLearningFromSource = sourceLang === learningLanguage;
@@ -42,9 +44,10 @@ Select ${aiTargetCount}-${aiMaxCount} words with high learning value from the pr
 1. Select ONLY ${aiTargetCount}-${aiMaxCount} words total
 2. NEVER translate: proper nouns, person names, place names, brand names, numbers, code snippets, URLs
 3. SKIP: words already in the target language
-4. Prioritize: common useful vocabulary with mixed difficulty levels
+4. Prioritize: common useful vocabulary with appropriate difficulty levels
 5. Translation style: context-aware, single best meaning (not multiple definitions)
 6. **CRITICAL PHONETIC RULE**: The "phonetic" field MUST be the pronunciation of the "${learningWordField}" field (the ${learningLanguage} word), NOT the ${isLearningFromSource ? targetLang : sourceLang} word!
+7. **CRITICAL DIFFICULTY RULE**: User's current CEFR level is **${userDifficultyLevel}**. ONLY select words with difficulty level **${userDifficultyLevel} or higher** (i.e., ${userDifficultyLevel}${getHigherLevelsHint(userDifficultyLevel)}). Do NOT include words easier than ${userDifficultyLevel}${getEasierLevelsHint(userDifficultyLevel)}.
 
 ${getCommonSections(nativeLanguage, learningLanguage, isLearningFromSource)}
 
@@ -173,4 +176,28 @@ A1 → A2 → B1 → B2 → C1 → C2
 - **partOfSpeech**: grammatical category in learning language (${learningLanguage}) - e.g., "noun", "verb", "adjective"
 - **shortDefinition**: brief definition in learning language (${learningLanguage}) - keep it concise (1-2 sentences max)
 - **example**: a natural example sentence in learning language (${learningLanguage}) using the word in context`;
+}
+
+/**
+ * 获取比指定等级更高的等级列表（用于提示词）
+ * @param {string} level - 用户 CEFR 等级
+ * @returns {string} 更高等级的描述，如 "/B2/C1/C2"
+ */
+function getHigherLevelsHint(level) {
+  const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  const idx = levels.indexOf(level);
+  if (idx < 0 || idx >= levels.length - 1) return '';
+  return '/' + levels.slice(idx + 1).join('/');
+}
+
+/**
+ * 获取比指定等级更简单的等级提示（用于提示词）
+ * @param {string} level - 用户 CEFR 等级
+ * @returns {string} 更简单等级的提示，如 " (i.e., no A1/A2/B1 words)"
+ */
+function getEasierLevelsHint(level) {
+  const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  const idx = levels.indexOf(level);
+  if (idx <= 0) return '';
+  return ' (i.e., no ' + levels.slice(0, idx).join('/') + ' words)';
 }
