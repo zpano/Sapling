@@ -73,7 +73,13 @@ chrome.runtime.onInstalled.addListener((details) => {
       todayWords: 0,
       lastResetDate: new Date().toISOString().split('T')[0],
       cacheHits: 0,
-      cacheMisses: 0
+      cacheMisses: 0,
+      vocabTestCompleted: false
+    });
+    
+    // 打开词汇量测试页面
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('vocab-test.html')
     });
   } else {
     chrome.storage.sync.get('cacheMaxSize', (result) => {

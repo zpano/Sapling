@@ -46,11 +46,11 @@
   transition: background 0.3s ease !important;
 }
 
-/* Toast 显示状态 */
+/* Toast 显示状态 - 显示在页面顶部 */
 .Sapling-toast {
-  bottom: 24px !important;
+  top: 24px !important;
   left: 50% !important;
-  transform: translateX(-50%) translateY(100px) !important;
+  transform: translateX(-50%) translateY(-100px) !important;
   opacity: 0 !important;
   transition: all 0.3s ease !important;
 }
@@ -266,6 +266,16 @@
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   box-shadow: var(--sapling-tooltip-shadow) !important;
   border: 1px solid var(--sapling-border) !important;
+  max-width: 500px !important;
+  word-wrap: break-word !important;
+}
+
+/* 错误提示样式 */
+.Sapling-toast[data-type="error"] {
+  background: #d32f2f !important;
+  color: #ffffff !important;
+  border: 1px solid #b71c1c !important;
+  font-weight: 500 !important;
 }
 
 /* 打印时隐藏 */

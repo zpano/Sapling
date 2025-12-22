@@ -190,5 +190,25 @@
   "presets": {
     "message": "预设服务",
     "description": "预设服务选择"
+  },
+  "apiKeyNotConfigured": {
+    "message": "API Key 未配置，请前往设置页面配置",
+    "description": "API Key 未配置错误提示"
+  },
+  "apiEndpointNotConfigured": {
+    "message": "API 端点未配置，请前往设置页面配置",
+    "description": "API 端点未配置错误提示"
+  },
+  "apiRequestFailed": {
+    "message": "API 请求失败",
+    "description": "API 请求失败错误提示"
+  },
+  "vocabTestTitle": {
+    "message": "词汇量测试",
+    "description": "词汇量测试页面标题"
+  },
+  "retestVocab": {
+    "message": "重新测试词汇量",
+    "description": "重新测试词汇量按钮"
   }
 }

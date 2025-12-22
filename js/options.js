@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     difficultyLevel: document.getElementById('difficultyLevel'),
     selectedDifficulty: document.getElementById('selectedDifficulty'),
     intensityRadios: document.querySelectorAll('input[name="intensity"]'),
+    retestVocabBtn: document.getElementById('retestVocabBtn'),
 
     // 行为设置
     autoProcess: document.getElementById('autoProcess'),
@@ -841,6 +842,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       });
     });
+
+    // 重新测试词汇量
+    if (elements.retestVocabBtn) {
+      elements.retestVocabBtn.addEventListener('click', () => {
+        // 清除测试完成标记，允许重新测试
+        chrome.storage.sync.set({ vocabTestCompleted: false }, () => {
+          // 打开词汇量测试页面
+          chrome.tabs.create({
+            url: chrome.runtime.getURL('vocab-test.html')
+          });
+        });
+      });
+    }
 
     if (elements.themeResetBtn) {
       elements.themeResetBtn.addEventListener('click', () => {

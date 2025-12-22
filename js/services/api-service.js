@@ -136,8 +136,22 @@ class ApiService {
   async translateText(text, config, cacheMap, updateStatsCallback, saveCacheCallback) {
     this._maxConcurrentRequests = normalizeConcurrencyLimit(config?.concurrencyLimit, this._maxConcurrentRequests);
 
+    // 检查 API 配置
     if (!config.apiKey || !config.apiEndpoint) {
-      throw new Error('API 未配置');
+      const errorDetails = {
+        apiKey: config.apiKey ? '已配置' : '未配置',
+        apiEndpoint: config.apiEndpoint || '未配置',
+        timestamp: new Date().toISOString()
+      };
+      
+      console.error('[Sapling API Error] API 配置不完整，无法进行翻译');
+      console.error('[Sapling API Error] 详细信息:', errorDetails);
+      console.error('[Sapling API Error] 请前往插件设置页面配置 API Key 和 API 端点');
+      
+      const error = new Error(!config.apiKey ? 'API Key 未配置，请前往设置页面配置' : 'API 端点未配置，请前往设置页面配置');
+      error.code = 'API_NOT_CONFIGURED';
+      error.details = errorDetails;
+      throw error;
     }
 
     const sourceLang = await detectLanguage(text);
@@ -278,8 +292,20 @@ class ApiService {
         });
 
         if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          throw new Error(error.error?.message || `API Error: ${response.status}`);
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error?.message || `API 请求失败: HTTP ${response.status}`;
+          
+          console.error('[Sapling API Error] API 请求失败');
+          console.error('[Sapling API Error] 状态码:', response.status);
+          console.error('[Sapling API Error] 错误详情:', errorData);
+          console.error('[Sapling API Error] API 端点:', config.apiEndpoint);
+          console.error('[Sapling API Error] 模型名称:', config.modelName);
+          
+          const error = new Error(errorMessage);
+          error.code = 'API_REQUEST_FAILED';
+          error.status = response.status;
+          error.details = errorData;
+          throw error;
         }
 
         const data = await response.json();
@@ -403,8 +429,27 @@ class ApiService {
   async translateSpecificWords(targetWords, config, cacheMap, updateStatsCallback, saveCacheCallback) {
     this._maxConcurrentRequests = normalizeConcurrencyLimit(config?.concurrencyLimit, this._maxConcurrentRequests);
 
-    if (!config.apiKey || !config.apiEndpoint || !targetWords?.length) {
+    if (!targetWords?.length) {
       return [];
+    }
+
+    // 检查 API 配置
+    if (!config.apiKey || !config.apiEndpoint) {
+      const errorDetails = {
+        apiKey: config.apiKey ? '已配置' : '未配置',
+        apiEndpoint: config.apiEndpoint || '未配置',
+        targetWords: targetWords,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.error('[Sapling API Error] API 配置不完整，无法翻译特定单词');
+      console.error('[Sapling API Error] 详细信息:', errorDetails);
+      console.error('[Sapling API Error] 请前往插件设置页面配置 API Key 和 API 端点');
+      
+      const error = new Error(!config.apiKey ? 'API Key 未配置，请前往设置页面配置' : 'API 端点未配置，请前往设置页面配置');
+      error.code = 'API_NOT_CONFIGURED';
+      error.details = errorDetails;
+      throw error;
     }
 
     const sourceLang = await detectLanguage(targetWords.join(' '));
@@ -471,8 +516,21 @@ class ApiService {
           });
 
           if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.error?.message || `API Error: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.error?.message || `API 请求失败: HTTP ${response.status}`;
+            
+            console.error('[Sapling API Error] 翻译特定单词 API 请求失败');
+            console.error('[Sapling API Error] 状态码:', response.status);
+            console.error('[Sapling API Error] 错误详情:', errorData);
+            console.error('[Sapling API Error] API 端点:', config.apiEndpoint);
+            console.error('[Sapling API Error] 模型名称:', config.modelName);
+            console.error('[Sapling API Error] 目标单词:', targetWords);
+            
+            const error = new Error(errorMessage);
+            error.code = 'API_REQUEST_FAILED';
+            error.status = response.status;
+            error.details = errorData;
+            throw error;
           }
 
           const data = await response.json();

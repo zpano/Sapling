@@ -190,5 +190,25 @@
   "presets": {
     "message": "Preset Services",
     "description": "Preset service selection"
+  },
+  "apiKeyNotConfigured": {
+    "message": "API Key is not configured. Please configure it in the settings page.",
+    "description": "API Key not configured error message"
+  },
+  "apiEndpointNotConfigured": {
+    "message": "API Endpoint is not configured. Please configure it in the settings page.",
+    "description": "API Endpoint not configured error message"
+  },
+  "apiRequestFailed": {
+    "message": "API request failed",
+    "description": "API request failed error message"
+  },
+  "vocabTestTitle": {
+    "message": "Vocabulary Test",
+    "description": "Vocabulary test page title"
+  },
+  "retestVocab": {
+    "message": "Retest Vocabulary",
+    "description": "Retest vocabulary button"
   }
 }

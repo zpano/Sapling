@@ -396,13 +396,25 @@ async function addToMemorizeList(word) {
         } catch (error) {
           console.error('[Sapling] Error translating word:', trimmedWord, error);
           console.error('[Sapling] Error translating word:', trimmedWord, error);
-          showToast(`"${trimmedWord}" 已添加到记忆列表`);
+          
+          // 如果是 API 配置错误，显示详细的错误信息
+          if (error.code === 'API_NOT_CONFIGURED' || error.code === 'API_REQUEST_FAILED') {
+            showToast(`❌ ${error.message}`, { type: 'error', duration: 3000 });
+          } else {
+            showToast(`"${trimmedWord}" 已添加到记忆列表（翻译失败）`);
+          }
         }
       }
     } catch (error) {
       console.error('[Sapling] Error processing word:', trimmedWord, error);
       console.error('[Sapling] Error processing word:', trimmedWord, error);
-      showToast(`"${trimmedWord}" 已添加到记忆列表`);
+      
+      // 如果是 API 配置错误，显示详细的错误信息
+      if (error.code === 'API_NOT_CONFIGURED' || error.code === 'API_REQUEST_FAILED') {
+        showToast(`❌ ${error.message}`, { type: 'error', duration: 3000 });
+      } else {
+        showToast(`"${trimmedWord}" 添加失败`);
+      }
     }
   } else {
     showToast(`"${trimmedWord}" 已在记忆列表中`);
@@ -586,7 +598,19 @@ async function processSpecificWords(targetWords) {
   );
 
   // 获取目标单词的翻译
-  const translations = await translateSpecificWords(targetWords);
+  let translations;
+  try {
+    translations = await translateSpecificWords(targetWords);
+  } catch (e) {
+    console.error('[Sapling] Error translating specific words:', e);
+    
+    // 如果是 API 配置错误，显示友好的提示
+    if (e.code === 'API_NOT_CONFIGURED' || e.code === 'API_REQUEST_FAILED') {
+      showToast(`❌ ${e.message}`, { type: 'error', duration: 3000 });
+    }
+    
+    return 0;
+  }
 
   if (translations.length === 0) {
     return 0;
@@ -735,6 +759,20 @@ async function processPage(viewportOnly = false) {
       } catch (e) {
         console.error('[Sapling] Segment error:', e);
         el.classList.remove('Sapling-processing');
+        
+        // 如果是 API 配置错误，显示友好的提示
+        if (e.code === 'API_NOT_CONFIGURED' || e.code === 'API_REQUEST_FAILED') {
+          // 只显示一次错误提示，避免多个段落重复显示
+          if (!window.__saplingApiErrorShown) {
+            window.__saplingApiErrorShown = true;
+            showToast(`❌ ${e.message}`, { type: 'error', duration: 3000 });
+            // 5秒后重置标记，允许再次显示
+            setTimeout(() => {
+              window.__saplingApiErrorShown = false;
+            }, 5000);
+          }
+        }
+        
         return { count: 0, error: true };
       }
     }
