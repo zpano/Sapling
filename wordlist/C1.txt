@@ -5,7 +5,6 @@ absent
 absurd
 abundance
 abuse
-abuse
 academy
 accelerate
 acceptance
@@ -37,7 +36,6 @@ adolescent
 adoption
 adverse
 advocate
-advocate
 aesthetic
 affection
 aftermath
@@ -46,12 +44,9 @@ agricultural
 aide
 albeit
 alert
-alert
-alert
 alien
 align
 alignment
-alike
 alike
 allegation
 allege
@@ -62,7 +57,6 @@ allocation
 allowance
 ally
 aluminium
-amateur
 amateur
 ambassador
 amend
@@ -92,7 +86,6 @@ aspiration
 aspire
 assassination
 assault
-assault
 assemble
 assembly
 assert
@@ -104,7 +97,6 @@ attain
 attendance
 attorney
 attribute
-attribute
 audit
 authentic
 authorize
@@ -114,7 +106,6 @@ availability
 await
 backdrop
 backing
-backup
 backup
 bail
 ballot
@@ -140,9 +131,7 @@ bishop
 bizarre
 blade
 blast
-blast
 bleed
-blend
 blend
 bless
 blessing
@@ -152,12 +141,9 @@ boom
 bounce
 boundary
 bow
-bow
-breach
 breach
 breakdown
 breakthrough
-breed
 breed
 broadband
 browser
@@ -200,7 +186,6 @@ circulation
 citizenship
 civic
 civilian
-civilian
 clarity
 clash
 classification
@@ -219,7 +204,6 @@ collective
 collision
 colonial
 columnist
-combat
 combat
 commence
 commentary
@@ -245,7 +229,6 @@ complication
 comply
 composition
 compromise
-compromise
 compute
 conceal
 concede
@@ -269,7 +252,6 @@ consciousness
 consecutive
 consensus
 consent
-consent
 conserve
 consistency
 consolidate
@@ -288,7 +270,6 @@ contention
 continually
 contractor
 contradiction
-contrary
 contrary
 contributor
 conversion
@@ -370,7 +351,6 @@ deployment
 deposit
 deprive
 deputy
-deputy
 descend
 descent
 designate
@@ -410,14 +390,12 @@ displace
 disposal
 dispose
 dispute
-dispute
 disrupt
 disruption
 dissolve
 distinction
 distinctive
 distort
-distress
 distress
 disturbing
 divert
@@ -440,8 +418,6 @@ dynamic
 eager
 earnings
 ease
-ease
-echo
 echo
 ecological
 educator
@@ -467,7 +443,6 @@ encouragement
 encouraging
 endeavour
 endless
-endorse
 endorse
 endorsement
 endure
@@ -513,7 +488,6 @@ explicit
 explicitly
 exploitation
 explosive
-explosive
 extract
 extremist
 facilitate
@@ -523,17 +497,13 @@ fade
 fairness
 fatal
 fate
-fate
 favourable
 feat
-feminist
 feminist
 fibre
 fierce
 film-maker
 filter
-filter
-fine
 fine
 firearm
 fit
@@ -571,23 +541,18 @@ gear
 generic
 genocide
 glance
-glance
 glimpse
 glorious
 glory
 governance
 grace
 grasp
-grasp
-grave
 grave
 gravity
 grid
 grief
 grin
-grin
 grind
-grip
 grip
 gross
 guerrilla
@@ -597,7 +562,6 @@ gut
 hail
 halfway
 halt
-halt
 handful
 handling
 handy
@@ -606,7 +570,6 @@ hardware
 harmony
 harsh
 harvest
-harvest
 hatred
 haunt
 hazard
@@ -614,7 +577,6 @@ heighten
 heritage
 hierarchy
 high-profile
-hint
 hint
 homeland
 hook
@@ -675,7 +637,6 @@ instruct
 instrumental
 insufficient
 insult
-insult
 intact
 intake
 integral
@@ -692,7 +653,6 @@ interface
 interfere
 interference
 interim
-interior
 interior
 intermediate
 intervene
@@ -719,16 +679,13 @@ kingdom
 lad
 landlord
 landmark
-landmark
 lap
 large-scale
 laser
 latter
-latter
 lawn
 lawsuit
 layout
-leak
 leak
 leap
 legacy
@@ -756,8 +713,6 @@ listing
 literacy
 liver
 lobby
-lobby
-log
 log
 logic
 long-standing
@@ -772,7 +727,6 @@ magnetic
 magnitude
 mainland
 mainstream
-mainstream
 maintenance
 mandate
 mandatory
@@ -781,14 +735,12 @@ manipulate
 manipulation
 manuscript
 march
-march
 marginal
 marine
 marketplace
 mask
 massacre
 mathematical
-mature
 mature
 maximize
 meaningful
@@ -839,7 +791,6 @@ namely
 nationwide
 naval
 neglect
-neglect
 neighbouring
 nest
 net
@@ -882,7 +833,6 @@ outing
 outlet
 outlook
 outrage
-outrage
 outsider
 overlook
 overly
@@ -904,7 +854,6 @@ patch
 patent
 pathway
 patrol
-patrol
 patron
 peak
 peasant
@@ -922,7 +871,6 @@ pirate
 pit
 plea
 plead
-pledge
 pledge
 plug
 plunge
@@ -947,7 +895,6 @@ preliminary
 premier
 premise
 premium
-premium
 prescribe
 prescription
 presently
@@ -966,12 +913,10 @@ principal
 privatization
 privilege
 probe
-probe
 problematic
 proceedings
 proceeds
 processing
-processor
 processor
 proclaim
 productive
@@ -997,8 +942,6 @@ provoke
 psychiatric
 pulse
 pump
-pump
-punch
 punch
 query
 quest
@@ -1007,11 +950,8 @@ radar
 radical
 rage
 raid
-raid
-rally
 rally
 ranking
-rape
 rape
 ratio
 rational
@@ -1019,7 +959,6 @@ ray
 readily
 realization
 realm
-rear
 rear
 reasoning
 reassure
@@ -1031,7 +970,6 @@ recount
 referendum
 reflection
 reform
-reform
 refuge
 refusal
 regain
@@ -1040,7 +978,6 @@ regime
 regulator
 regulatory
 rehabilitation
-reign
 reign
 rejection
 relevance
@@ -1074,12 +1011,9 @@ restoration
 restraint
 resume
 retreat
-retreat
 retrieve
 revelation
 revenge
-reverse
-reverse
 reverse
 revival
 revive
@@ -1107,9 +1041,7 @@ scattered
 sceptical
 scope
 screw
-screw
 scrutiny
-seal
 seal
 secular
 seemingly
@@ -1123,7 +1055,6 @@ sensitivity
 sentiment
 separation
 serial
-settlement
 settlement
 set-up
 sexuality
@@ -1158,7 +1089,6 @@ solely
 solicitor
 solidarity
 solo
-solo
 sound
 sovereignty
 spam
@@ -1168,17 +1098,14 @@ spark
 specialized
 specification
 specimen
-specimen
 spectacle
 spectrum
 spell
 sphere
 spin
-spin
 spine
 spotlight
 spouse
-spy
 spy
 squad
 squeeze
@@ -1191,8 +1118,6 @@ stark
 statistical
 steer
 stem
-stem
-stem
 stereotype
 stimulus
 stir
@@ -1202,7 +1127,6 @@ strain
 strand
 strategic
 striking
-strip
 strip
 strive
 structural
@@ -1214,7 +1138,6 @@ subscription
 subsidy
 substantial
 substantially
-substitute
 substitute
 substitution
 subtle
@@ -1233,12 +1156,10 @@ supervise
 supervision
 supervisor
 supplement
-supplement
 supportive
 supposedly
 suppress
 supreme
-surge
 surge
 surgical
 surplus
@@ -1248,7 +1169,6 @@ suspension
 suspicion
 suspicious
 sustain
-swing
 swing
 sword
 symbolic
@@ -1292,19 +1212,14 @@ tolerate
 toll
 top
 torture
-torture
 toss
 total
 toxic
 trace
 trademark
 trail
-trail
-trail
-trail
 trailer
 transaction
-transcript
 transcript
 transformation
 transit
@@ -1327,7 +1242,6 @@ tuition
 turnout
 turnover
 twist
-twist
 undergraduate
 underlying
 undermine
@@ -1336,7 +1250,6 @@ unify
 unprecedented
 unveil
 upcoming
-upgrade
 upgrade
 uphold
 utility
@@ -1350,14 +1263,11 @@ variable
 varied
 vein
 venture
-venture
 verbal
 verdict
 verify
 verse
 versus
-vessel
-vessel
 vessel
 veteran
 viable
@@ -1375,7 +1285,6 @@ vulnerable
 ward
 warehouse
 warfare
-warrant
 warrant
 warrior
 weaken
@@ -1397,10 +1306,8 @@ wit
 withdrawal
 workout
 worship
-worship
 worthwhile
 worthy
 yell
-yield
 yield
 youngster
