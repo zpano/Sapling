@@ -380,7 +380,7 @@ async function addToMemorizeList(word) {
     }
 
     if (!config.enabled) {
-      showToast(`"${trimmedWord}" 已添加到记忆列表`);
+      showToast(`Sapling: "${trimmedWord}" 已添加到记忆列表`);
       return;
     }
 
@@ -388,20 +388,23 @@ async function addToMemorizeList(word) {
       const count = await processSpecificWords([trimmedWord]);
 
       if (count > 0) {
-        showToast(`"${trimmedWord}" 已添加到记忆列表并翻译`);
+        showToast(`Sapling: "${trimmedWord}" 已添加到记忆列表并翻译`);
       } else {
         try {
           await translateSpecificWords([trimmedWord]);
-          showToast(`"${trimmedWord}" 已添加到记忆列表`);
+          showToast(`Sapling: "${trimmedWord}" 已添加到记忆列表`);
         } catch (error) {
           console.error('[Sapling] Error translating word:', trimmedWord, error);
           console.error('[Sapling] Error translating word:', trimmedWord, error);
           
-          // 如果是 API 配置错误，显示详细的错误信息
-          if (error.code === 'API_NOT_CONFIGURED' || error.code === 'API_REQUEST_FAILED') {
-            showToast(`❌ ${error.message}`, { type: 'error', duration: 3000 });
+          // 如果是 API 相关错误，显示详细的错误信息
+          const isApiError = ['API_NOT_CONFIGURED', 'API_REQUEST_FAILED', 'NETWORK_ERROR', 
+                             'INVALID_API_KEY', 'FORBIDDEN', 'RATE_LIMIT', 'SERVER_ERROR'].includes(error.code);
+          
+          if (isApiError) {
+            showToast(`Sapling: ${error.message}`, { type: 'error', duration: 3000 });
           } else {
-            showToast(`"${trimmedWord}" 已添加到记忆列表（翻译失败）`);
+            showToast(`Sapling: "${trimmedWord}" 已添加到记忆列表（翻译失败）`);
           }
         }
       }
@@ -409,15 +412,18 @@ async function addToMemorizeList(word) {
       console.error('[Sapling] Error processing word:', trimmedWord, error);
       console.error('[Sapling] Error processing word:', trimmedWord, error);
       
-      // 如果是 API 配置错误，显示详细的错误信息
-      if (error.code === 'API_NOT_CONFIGURED' || error.code === 'API_REQUEST_FAILED') {
-        showToast(`❌ ${error.message}`, { type: 'error', duration: 3000 });
+      // 如果是 API 相关错误，显示详细的错误信息
+      const isApiError = ['API_NOT_CONFIGURED', 'API_REQUEST_FAILED', 'NETWORK_ERROR', 
+                         'INVALID_API_KEY', 'FORBIDDEN', 'RATE_LIMIT', 'SERVER_ERROR'].includes(error.code);
+      
+      if (isApiError) {
+        showToast(`Sapling: ${error.message}`, { type: 'error', duration: 3000 });
       } else {
-        showToast(`"${trimmedWord}" 添加失败`);
+        showToast(`Sapling: "${trimmedWord}" 添加失败`);
       }
     }
   } else {
-    showToast(`"${trimmedWord}" 已在记忆列表中`);
+    showToast(`Sapling: "${trimmedWord}" 已在记忆列表中`);
   }
 }
 
@@ -604,9 +610,12 @@ async function processSpecificWords(targetWords) {
   } catch (e) {
     console.error('[Sapling] Error translating specific words:', e);
     
-    // 如果是 API 配置错误，显示友好的提示
-    if (e.code === 'API_NOT_CONFIGURED' || e.code === 'API_REQUEST_FAILED') {
-      showToast(`❌ ${e.message}`, { type: 'error', duration: 3000 });
+    // 如果是 API 相关错误，显示友好的提示
+    const isApiError = ['API_NOT_CONFIGURED', 'API_REQUEST_FAILED', 'NETWORK_ERROR', 
+                       'INVALID_API_KEY', 'FORBIDDEN', 'RATE_LIMIT', 'SERVER_ERROR'].includes(e.code);
+    
+    if (isApiError) {
+      showToast(`Sapling: ${e.message}`, { type: 'error', duration: 3000 });
     }
     
     return 0;
@@ -760,12 +769,15 @@ async function processPage(viewportOnly = false) {
         console.error('[Sapling] Segment error:', e);
         el.classList.remove('Sapling-processing');
         
-        // 如果是 API 配置错误，显示友好的提示
-        if (e.code === 'API_NOT_CONFIGURED' || e.code === 'API_REQUEST_FAILED') {
+        // 如果是 API 相关错误，显示友好的提示
+        const isApiError = ['API_NOT_CONFIGURED', 'API_REQUEST_FAILED', 'NETWORK_ERROR', 
+                           'INVALID_API_KEY', 'FORBIDDEN', 'RATE_LIMIT', 'SERVER_ERROR'].includes(e.code);
+        
+        if (isApiError) {
           // 只显示一次错误提示，避免多个段落重复显示
           if (!window.__saplingApiErrorShown) {
             window.__saplingApiErrorShown = true;
-            showToast(`❌ ${e.message}`, { type: 'error', duration: 3000 });
+            showToast(`Sapling: ${e.message}`, { type: 'error', duration: 3000 });
             // 5秒后重置标记，允许再次显示
             setTimeout(() => {
               window.__saplingApiErrorShown = false;
@@ -849,7 +861,7 @@ function setupEventListeners() {
           break;
         case 'memorize':
           await addToMemorizeList(original);
-          showToast(`"${original}" 已添加到记忆列表`);
+          showToast(`Sapling: "${original}" 已添加到记忆列表`);
           break;
         case 'learned':
           await addToWhitelist(original, translation, difficulty);
@@ -859,7 +871,7 @@ function setupEventListeners() {
             restoreOriginal(currentElement);
           }
           tooltipManager.hide(true);
-          showToast(`"${original}" 已标记为已学会`);
+          showToast(`Sapling: "${original}" 已标记为已学会`);
           break;
       }
 

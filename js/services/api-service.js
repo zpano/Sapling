@@ -274,35 +274,73 @@ class ApiService {
 
         const userPrompt = `${filteredText}`;
 
-        const response = await fetch(config.apiEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${config.apiKey}`
-          },
-          body: JSON.stringify({
-            model: config.modelName,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
-            ],
-            temperature: 0,
-            max_tokens: 4096
-          })
-        });
+        let response;
+        try {
+          response = await fetch(config.apiEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${config.apiKey}`
+            },
+            body: JSON.stringify({
+              model: config.modelName,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+              ],
+              temperature: 0,
+              max_tokens: 4096
+            })
+          });
+        } catch (fetchError) {
+          // 网络错误（无法连接到服务器）
+          console.error('[Sapling API Error] 网络连接失败');
+          console.error('[Sapling API Error] 错误详情:', fetchError.message);
+          console.error('[Sapling API Error] API 端点:', config.apiEndpoint);
+          console.error('[Sapling API Error] 可能原因: 网络断开、服务器无响应、DNS 解析失败');
+          
+          const error = new Error('网络连接失败，请检查网络连接或 API 端点配置');
+          error.code = 'NETWORK_ERROR';
+          error.details = { originalError: fetchError.message };
+          throw error;
+        }
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          const errorMessage = errorData.error?.message || `API 请求失败: HTTP ${response.status}`;
           
-          console.error('[Sapling API Error] API 请求失败');
+          // 根据 HTTP 状态码生成更具体的错误信息
+          let errorMessage;
+          let errorCode;
+          
+          if (response.status === 401) {
+            errorMessage = 'API Key 无效或已过期，请检查 API Key 配置';
+            errorCode = 'INVALID_API_KEY';
+            console.error('[Sapling API Error] API Key 认证失败');
+          } else if (response.status === 403) {
+            errorMessage = '没有权限访问该 API，请检查 API Key 权限';
+            errorCode = 'FORBIDDEN';
+            console.error('[Sapling API Error] API 访问被拒绝');
+          } else if (response.status === 429) {
+            errorMessage = 'API 请求频率超限，请稍后重试';
+            errorCode = 'RATE_LIMIT';
+            console.error('[Sapling API Error] API 请求频率超限');
+          } else if (response.status === 500 || response.status === 502 || response.status === 503) {
+            errorMessage = 'API 服务器错误，请稍后重试';
+            errorCode = 'SERVER_ERROR';
+            console.error('[Sapling API Error] API 服务器错误');
+          } else {
+            errorMessage = errorData.error?.message || `API 请求失败 (HTTP ${response.status})`;
+            errorCode = 'API_REQUEST_FAILED';
+            console.error('[Sapling API Error] API 请求失败');
+          }
+          
           console.error('[Sapling API Error] 状态码:', response.status);
           console.error('[Sapling API Error] 错误详情:', errorData);
           console.error('[Sapling API Error] API 端点:', config.apiEndpoint);
           console.error('[Sapling API Error] 模型名称:', config.modelName);
           
           const error = new Error(errorMessage);
-          error.code = 'API_REQUEST_FAILED';
+          error.code = errorCode;
           error.status = response.status;
           error.details = errorData;
           throw error;
@@ -498,28 +536,66 @@ class ApiService {
         const userPrompt = uncached.join(', ');
 
         const apiResults = await this._runLimited(async () => {
-          const response = await fetch(config.apiEndpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${config.apiKey}`
-            },
-            body: JSON.stringify({
-              model: config.modelName,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt }
-              ],
-              temperature: 0,
-              max_tokens: 4096
-            })
-          });
+          let response;
+          try {
+            response = await fetch(config.apiEndpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.apiKey}`
+              },
+              body: JSON.stringify({
+                model: config.modelName,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userPrompt }
+                ],
+                temperature: 0,
+                max_tokens: 4096
+              })
+            });
+          } catch (fetchError) {
+            // 网络错误
+            console.error('[Sapling API Error] 网络连接失败（翻译特定单词）');
+            console.error('[Sapling API Error] 错误详情:', fetchError.message);
+            console.error('[Sapling API Error] API 端点:', config.apiEndpoint);
+            console.error('[Sapling API Error] 目标单词:', targetWords);
+            
+            const error = new Error('网络连接失败，请检查网络连接或 API 端点配置');
+            error.code = 'NETWORK_ERROR';
+            error.details = { originalError: fetchError.message };
+            throw error;
+          }
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.error?.message || `API 请求失败: HTTP ${response.status}`;
             
-            console.error('[Sapling API Error] 翻译特定单词 API 请求失败');
+            // 根据 HTTP 状态码生成更具体的错误信息
+            let errorMessage;
+            let errorCode;
+            
+            if (response.status === 401) {
+              errorMessage = 'API Key 无效或已过期，请检查 API Key 配置';
+              errorCode = 'INVALID_API_KEY';
+              console.error('[Sapling API Error] API Key 认证失败（翻译特定单词）');
+            } else if (response.status === 403) {
+              errorMessage = '没有权限访问该 API，请检查 API Key 权限';
+              errorCode = 'FORBIDDEN';
+              console.error('[Sapling API Error] API 访问被拒绝（翻译特定单词）');
+            } else if (response.status === 429) {
+              errorMessage = 'API 请求频率超限，请稍后重试';
+              errorCode = 'RATE_LIMIT';
+              console.error('[Sapling API Error] API 请求频率超限（翻译特定单词）');
+            } else if (response.status === 500 || response.status === 502 || response.status === 503) {
+              errorMessage = 'API 服务器错误，请稍后重试';
+              errorCode = 'SERVER_ERROR';
+              console.error('[Sapling API Error] API 服务器错误（翻译特定单词）');
+            } else {
+              errorMessage = errorData.error?.message || `API 请求失败 (HTTP ${response.status})`;
+              errorCode = 'API_REQUEST_FAILED';
+              console.error('[Sapling API Error] API 请求失败（翻译特定单词）');
+            }
+            
             console.error('[Sapling API Error] 状态码:', response.status);
             console.error('[Sapling API Error] 错误详情:', errorData);
             console.error('[Sapling API Error] API 端点:', config.apiEndpoint);
@@ -527,7 +603,7 @@ class ApiService {
             console.error('[Sapling API Error] 目标单词:', targetWords);
             
             const error = new Error(errorMessage);
-            error.code = 'API_REQUEST_FAILED';
+            error.code = errorCode;
             error.status = response.status;
             error.details = errorData;
             throw error;

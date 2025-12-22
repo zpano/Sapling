@@ -193,15 +193,15 @@
   },
   "apiKeyNotConfigured": {
     "message": "API Key 未配置，请前往设置页面配置",
-    "description": "API Key 未配置错误提示"
+    "description": "Sapling: API Key 未配置错误提示"
   },
   "apiEndpointNotConfigured": {
     "message": "API 端点未配置，请前往设置页面配置",
-    "description": "API 端点未配置错误提示"
+    "description": "Sapling: API 端点未配置错误提示"
   },
   "apiRequestFailed": {
     "message": "API 请求失败",
-    "description": "API 请求失败错误提示"
+    "description": "Sapling: API 请求失败错误提示"
   },
   "vocabTestTitle": {
     "message": "词汇量测试",

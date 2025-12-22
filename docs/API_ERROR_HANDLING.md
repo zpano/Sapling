@@ -8,11 +8,23 @@
 
 ### 1. 页面 Toast 提示
 
-当检测到 API 配置错误时，页面会弹出 Toast 提示:
+当检测到 API 配置或请求错误时，页面会弹出 Toast 提示（所有提示都带有 `Sapling:` 前缀）:
 
-- **未配置 API Key**: `❌ API Key 未配置，请前往设置页面配置`
-- **未配置 API 端点**: `❌ API 端点未配置，请前往设置页面配置`
-- **API 请求失败**: `❌ API 请求失败: HTTP {状态码}`
+#### 配置错误
+- **未配置 API Key**: `Sapling: API Key 未配置，请前往设置页面配置`
+- **未配置 API 端点**: `Sapling: API 端点未配置，请前往设置页面配置`
+
+#### 认证错误
+- **API Key 无效**: `Sapling: API Key 无效或已过期，请检查 API Key 配置`
+- **权限不足**: `Sapling: 没有权限访问该 API，请检查 API Key 权限`
+
+#### 网络错误
+- **连接失败**: `Sapling: 网络连接失败，请检查网络连接或 API 端点配置`
+
+#### 服务器错误
+- **频率限制**: `Sapling: API 请求频率超限，请稍后重试`
+- **服务器故障**: `Sapling: API 服务器错误，请稍后重试`
+- **其他错误**: `Sapling: API 请求失败 (HTTP {状态码})`
 
 **防重复机制**: 同一批处理中的错误只显示一次，避免多个段落同时处理时重复弹出提示。
 
@@ -61,16 +73,27 @@
 ### 错误代码
 
 - `API_NOT_CONFIGURED`: API Key 或端点未配置
-- `API_REQUEST_FAILED`: API 请求失败（网络错误、认证失败等）
+- `NETWORK_ERROR`: 网络连接失败（无法连接到服务器）
+- `INVALID_API_KEY`: API Key 无效或已过期（HTTP 401）
+- `FORBIDDEN`: 没有权限访问该 API（HTTP 403）
+- `RATE_LIMIT`: API 请求频率超限（HTTP 429）
+- `SERVER_ERROR`: API 服务器错误（HTTP 500/502/503）
+- `API_REQUEST_FAILED`: 其他 API 请求失败
 
 ### 错误对象结构
 
 ```javascript
 {
   message: "错误消息",
-  code: "API_NOT_CONFIGURED" | "API_REQUEST_FAILED",
+  code: "API_NOT_CONFIGURED" | "NETWORK_ERROR" | "INVALID_API_KEY" | 
+        "FORBIDDEN" | "RATE_LIMIT" | "SERVER_ERROR" | "API_REQUEST_FAILED",
+  status?: number,              // HTTP 状态码（如果适用）
   details: {
     // 详细的错误信息
+    originalError?: string,     // 原始错误消息（网络错误）
+    apiKey?: string,           // API Key 配置状态
+    apiEndpoint?: string,      // API 端点
+    // ...其他详细信息
   }
 }
 ```
@@ -99,7 +122,9 @@
 
 ## 注意事项
 
-- Toast 提示会在 2 秒后自动消失
+- 所有 Toast 提示都带有 `Sapling:` 前缀，便于识别
+- 错误提示会在 3 秒后自动消失（普通提示 2 秒）
 - 同一错误在 5 秒内只会显示一次 Toast，避免干扰用户
 - 控制台日志会记录所有错误，不受频率限制
+- 错误类型自动识别，提供针对性的解决建议
 
