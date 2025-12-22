@@ -231,7 +231,7 @@ export class VocabTest {
     this.currentWordIndex++;
     
     // 如果当前等级的词汇测试完成
-    if (this.currentWordIndex >= VOCAB_TEST_WORDS[this.currentLevel].length) {
+    if (this.currentWordIndex >= this.testWords[this.currentLevel].length) {
       return this.moveToNextLevel();
     }
     
