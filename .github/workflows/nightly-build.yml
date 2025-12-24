@@ -80,15 +80,13 @@ jobs:
           mkdir -p release
           zip -r release/Sapling-nightly-${{ steps.info.outputs.date_compact }}${{ steps.info.outputs.tag_suffix }}.zip \
             manifest.json \
+            *.html \
             icons/ \
             css/ \
             js/ \
             dist/ \
             vendor/ \
             _locales/ \
-            popup.html \
-            options.html \
-            offscreen.html \
             -x "*.map" \
             -x "node_modules/*" \
             -x ".git/*" \
