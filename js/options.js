@@ -585,80 +585,154 @@ document.addEventListener('DOMContentLoaded', async () => {
   let allCachedWords = [];
 
   // 加载词汇列表
-  function loadWordLists(result) {
-    const learnedWords = result.learnedWords || [];
-    const memorizeList = result.memorizeList || [];
-    
-    // 保存原始数据（包含难度信息）
-    allLearnedWords = learnedWords.map(w => ({
-      original: w.original,
-      word: w.word,
-      addedAt: w.addedAt,
-      difficulty: w.difficulty || 'B1' // 如果已学会词汇有难度信息则使用，否则默认B1
-    }));
-    
-    allMemorizeWords = memorizeList.map(w => ({
-      original: w.word,
-      word: '',
-      addedAt: w.addedAt,
-      difficulty: w.difficulty || 'B1' // 如果需记忆词汇有难度信息则使用，否则默认B1
-    }));
-    
-    // 更新计数
-    elements.learnedTabCount.textContent = learnedWords.length;
-    elements.memorizeTabCount.textContent = memorizeList.length;
-    
-    // 应用搜索和筛选
-    filterLearnedWords();
-    filterMemorizeWords();
-    
-    // 加载缓存
-    storage.local.get('Sapling_word_cache', (data) => {
-      const cache = data.Sapling_word_cache || [];
-      lastKnownCacheSize = Array.isArray(cache) ? cache.length : 0;
-      elements.cachedTabCount.textContent = cache.length;
-      
-      const cacheWords = cache.map(item => {
-        const [word] = item.key.split(':');
-        return { 
-          original: word, 
-          word: item.translation, 
-          addedAt: item.timestamp,
-          difficulty: item.difficulty || 'B1',
-          phonetic: item.phonetic || ''
-        };
-      });
-      
-      // 保存原始数据
-      allCachedWords = cacheWords;
-      
-      // 应用搜索和筛选
-      filterCachedWords();
-    });
-  }
+	  function loadWordLists(result) {
+	    const learnedWords = result.learnedWords || [];
+	    const memorizeList = result.memorizeList || [];
+	    
+	    // 保存原始数据（包含难度信息）
+	    allLearnedWords = learnedWords.map(w => ({
+	      original: w.original,
+	      word: w.word,
+	      addedAt: w.addedAt,
+	      difficulty: w.difficulty || 'B1' // 如果已学会词汇有难度信息则使用，否则默认B1
+	    }));
+	    
+	    allMemorizeWords = memorizeList.map(w => ({
+	      original: w.word,
+	      word: w.translation || '',
+	      addedAt: w.addedAt,
+	      difficulty: w.difficulty || 'B1' // 如果需记忆词汇有难度信息则使用，否则默认B1
+	    }));
+	    
+	    // 更新计数
+	    elements.learnedTabCount.textContent = learnedWords.length;
+	    elements.memorizeTabCount.textContent = memorizeList.length;
+	    
+	    // 应用搜索和筛选
+	    filterLearnedWords();
+	    filterMemorizeWords();
+	    
+	    // 加载缓存
+	    storage.local.get('Sapling_word_cache', (data) => {
+	      const cache = data.Sapling_word_cache || [];
+	      lastKnownCacheSize = Array.isArray(cache) ? cache.length : 0;
+	      elements.cachedTabCount.textContent = cache.length;
+
+	      const nativeLanguage = elements.nativeLanguage?.value || result.nativeLanguage || 'zh-CN';
+	      const memorizeTranslationIndex = new Map();
+	      if (Array.isArray(cache)) {
+	        for (const item of cache) {
+	          const key = typeof item?.key === 'string' ? item.key : '';
+	          const [rawWord, , targetLang] = key.split(':');
+	          const translation = typeof item?.translation === 'string' ? item.translation : '';
+	          if (!rawWord || !targetLang || !translation) continue;
+
+	          const wordLower = rawWord.toLowerCase();
+	          const timestamp = Number(item?.timestamp) || 0;
+	          const prefersNative = targetLang === nativeLanguage;
+
+	          const existing = memorizeTranslationIndex.get(wordLower);
+	          if (!existing) {
+	            memorizeTranslationIndex.set(wordLower, { translation, timestamp, prefersNative });
+	            continue;
+	          }
+
+	          if (prefersNative && !existing.prefersNative) {
+	            memorizeTranslationIndex.set(wordLower, { translation, timestamp, prefersNative });
+	            continue;
+	          }
+
+	          if (prefersNative === existing.prefersNative && timestamp > existing.timestamp) {
+	            memorizeTranslationIndex.set(wordLower, { translation, timestamp, prefersNative });
+	          }
+	        }
+	      }
+	      
+	      const cacheWords = cache.map(item => {
+	        const [word] = item.key.split(':');
+	        return { 
+	          key: item.key,
+	          original: word, 
+	          word: item.translation, 
+	          addedAt: item.timestamp,
+	          difficulty: item.difficulty || 'B1',
+	          phonetic: item.phonetic || ''
+	        };
+	      });
+	      
+	      // 保存原始数据
+	      allCachedWords = cacheWords;
+
+	      // 用缓存为「需记忆」补全翻译（如果本地条目没有 translation 字段）
+	      allMemorizeWords = allMemorizeWords.map((w) => {
+	        if (w.word) return w;
+	        const hit = memorizeTranslationIndex.get(String(w.original || '').trim().toLowerCase());
+	        if (!hit?.translation) return w;
+	        return { ...w, word: hit.translation };
+	      });
+	      filterMemorizeWords();
+	      
+	      // 应用搜索和筛选
+	      filterCachedWords();
+	    });
+	  }
 
   // 渲染词汇列表
-  function renderWordList(container, words, type) {
-    if (words.length === 0) {
-      container.innerHTML = '<div class="empty-list">暂无词汇</div>';
-      return;
-    }
+	  function renderWordList(container, words, type) {
+	    if (words.length === 0) {
+	      container.innerHTML = '<div class="empty-list">暂无词汇</div>';
+	      return;
+	    }
 
-    container.innerHTML = words.map(w => `
-      <div class="word-item">
-        <span class="word-original">${w.original}</span>
-        ${w.word ? `<span class="word-translation">${w.word}</span>` : ''}
-        ${w.difficulty ? `<span class="word-difficulty difficulty-${w.difficulty.toLowerCase()}">${w.difficulty}</span>` : ''}
-        <span class="word-date">${formatDate(w.addedAt)}</span>
-        ${type !== 'cached' ? `<button class="word-remove" data-word="${w.original}" data-type="${type}">&times;</button>` : ''}
-      </div>
-    `).join('');
+	    container.innerHTML = words.map(w => `
+	      <div class="word-item">
+	        <span class="word-original">${w.original}</span>
+	        ${w.word || type === 'memorize'
+	          ? `<span class="word-translation${type === 'memorize' ? ' memorize-translation memorize-translation--masked' : ''}" data-type="${type}" title="${type === 'memorize' ? '悬停/点击显示翻译' : ''}">${w.word || '（暂无翻译）'}</span>`
+	          : ''}
+	        ${w.difficulty ? `<span class="word-difficulty difficulty-${w.difficulty.toLowerCase()}">${w.difficulty}</span>` : ''}
+	        <span class="word-date">${formatDate(w.addedAt)}</span>
+	        ${type === 'memorize' ? `<button type="button" class="word-mark-learned" data-word="${w.original}" title="标记为已学会" aria-label="标记为已学会">✓</button>` : ''}
+	        ${type === 'learned' ? `<button type="button" class="word-mark-memorize" data-word="${w.original}" title="移到需记忆" aria-label="移到需记忆">M</button>` : ''}
+	        ${type === 'cached'
+	          ? `<button type="button" class="word-remove" data-type="cached" data-key="${w.key || ''}" title="删除缓存" aria-label="删除缓存">&times;</button>`
+	          : `<button type="button" class="word-remove" data-word="${w.original}" data-type="${type}" title="删除" aria-label="删除">&times;</button>`}
+	      </div>
+	    `).join('');
 
-    // 绑定删除事件
-    container.querySelectorAll('.word-remove').forEach(btn => {
-      btn.addEventListener('click', () => removeWord(btn.dataset.word, btn.dataset.type));
-    });
-  }
+	    container.querySelectorAll('.word-mark-learned').forEach(btn => {
+	      btn.addEventListener('click', () => markMemorizeWordAsLearned(btn.dataset.word));
+	    });
+
+	    container.querySelectorAll('.word-mark-memorize').forEach(btn => {
+	      btn.addEventListener('click', () => markLearnedWordAsMemorize(btn.dataset.word));
+	    });
+
+	    container.querySelectorAll('.word-remove').forEach(btn => {
+	      btn.addEventListener('click', () => {
+	        const type = btn.dataset.type;
+	        if (type === 'cached') {
+	          removeCachedEntry(btn.dataset.key);
+	          return;
+	        }
+	        removeWord(btn.dataset.word, type);
+	      });
+	    });
+
+	    if (type === 'memorize') {
+	      container.querySelectorAll('.memorize-translation').forEach((span) => {
+	        span.addEventListener('click', (e) => {
+	          if (e.button !== 0) return;
+	          e.preventDefault();
+	          e.stopPropagation();
+
+	          if (span.classList.contains('memorize-translation--revealed')) return;
+	          span.classList.remove('memorize-translation--masked');
+	          span.classList.add('memorize-translation--revealed');
+	        });
+	      });
+	    }
+	  }
 
   // 搜索和筛选已学会词汇
   function filterLearnedWords() {
@@ -742,38 +816,147 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 格式化日期
-  function formatDate(timestamp) {
-    if (!timestamp) return '';
-    const date = new Date(timestamp);
-    return `${date.getMonth() + 1}/${date.getDate()}`;
-  }
+	  function formatDate(timestamp) {
+	    if (!timestamp) return '';
+	    const date = new Date(timestamp);
+	    return `${date.getMonth() + 1}/${date.getDate()}`;
+	  }
 
-  // 删除词汇（使用 local 存储）
-  async function removeWord(word, type) {
-    if (type === 'learned') {
-      storage.local.get('learnedWords', (result) => {
-        const list = (result.learnedWords || []).filter(w => w.original !== word);
-        storage.local.set({ learnedWords: list }, loadSettings);
-      });
-    } else if (type === 'memorize') {
-      storage.local.get('memorizeList', (result) => {
-        const list = (result.memorizeList || []).filter(w => w.word !== word);
-        storage.local.set({ memorizeList: list }, loadSettings);
-      });
-    }
-  }
+	  // 删除词汇（使用 local 存储）
+	  async function removeWord(word, type) {
+	    if (type === 'learned') {
+	      storage.local.get('learnedWords', (result) => {
+	        const list = (result.learnedWords || []).filter(w => w.original !== word);
+	        storage.local.set({ learnedWords: list }, loadSettings);
+	      });
+	    } else if (type === 'memorize') {
+	      storage.local.get('memorizeList', (result) => {
+	        const list = (result.memorizeList || []).filter(w => w.word !== word);
+	        storage.local.set({ memorizeList: list }, loadSettings);
+	      });
+	    }
+	  }
 
-  async function trimLocalCacheToMaxSize(maxSize) {
-    const normalized = normalizeCacheMaxSize(maxSize);
-    return new Promise((resolve) => {
-      storage.local.get('Sapling_word_cache', (data) => {
-        const cache = data.Sapling_word_cache || [];
-        if (!Array.isArray(cache) || cache.length <= normalized) return resolve(false);
-        const trimmed = cache.slice(-normalized);
-        storage.local.set({ Sapling_word_cache: trimmed }, () => resolve(true));
-      });
-    });
-  }
+	  function removeCachedEntry(cacheKey) {
+	    if (!cacheKey) return;
+	    storage.local.get('Sapling_word_cache', (data) => {
+	      const cache = data.Sapling_word_cache || [];
+	      const next = Array.isArray(cache) ? cache.filter(item => item?.key !== cacheKey) : [];
+	      storage.local.set({ Sapling_word_cache: next }, () => {
+	        showOptionsToast('已删除缓存', { type: 'success', durationMs: 1400 });
+	        loadSettings();
+	      });
+	    });
+	  }
+
+	  async function markMemorizeWordAsLearned(word) {
+	    if (!word) return;
+	    const trimmed = word.trim();
+	    if (!trimmed) return;
+	    const wordLower = trimmed.toLowerCase();
+
+	    try {
+	      const result = await storage.getLocal(['learnedWords', 'memorizeList', 'Sapling_word_cache']);
+	      const learnedWords = Array.isArray(result.learnedWords) ? result.learnedWords : [];
+	      const memorizeList = Array.isArray(result.memorizeList) ? result.memorizeList : [];
+	      const cache = Array.isArray(result.Sapling_word_cache) ? result.Sapling_word_cache : [];
+
+	      const memorizeItem = memorizeList.find(w => (w?.word || '').toLowerCase() === wordLower);
+	      const nextMemorize = memorizeList.filter(w => (w?.word || '').toLowerCase() !== wordLower);
+
+	      const cachedMatch = cache
+	        .filter(item => typeof item?.key === 'string' && item.key.startsWith(`${wordLower}:`))
+	        .sort((a, b) => (b?.timestamp || 0) - (a?.timestamp || 0))[0];
+
+	      const difficulty = memorizeItem?.difficulty || cachedMatch?.difficulty || 'B1';
+	      const translation = memorizeItem?.translation || cachedMatch?.translation || '';
+
+	      const alreadyLearned = learnedWords.some(w => (w?.original || '').toLowerCase() === wordLower);
+	      const nextLearned = alreadyLearned ? learnedWords : learnedWords.concat([{
+	        original: trimmed,
+	        word: translation,
+	        addedAt: Date.now(),
+	        difficulty
+	      }]);
+
+	      await storage.setLocal({ learnedWords: nextLearned, memorizeList: nextMemorize });
+
+	      // 立即更新 UI，避免依赖异步 reload 的时序
+	      allMemorizeWords = allMemorizeWords.filter(w => (w?.original || '').toLowerCase() !== wordLower);
+	      if (!alreadyLearned) {
+	        allLearnedWords = allLearnedWords.concat([{
+	          original: trimmed,
+	          word: translation,
+	          addedAt: Date.now(),
+	          difficulty
+	        }]);
+	      }
+	      filterMemorizeWords();
+	      filterLearnedWords();
+
+	      showOptionsToast(alreadyLearned ? '已从需记忆移除' : '已标记为已学会', { type: 'success', durationMs: 1400 });
+	      loadSettings();
+	    } catch (error) {
+	      console.error('[Sapling] Failed to move memorize word to learned:', error);
+	      showOptionsToast(`操作失败：${error?.message || String(error)}`, { type: 'error', durationMs: 2600 });
+	    }
+	  }
+
+	  async function markLearnedWordAsMemorize(word) {
+	    if (!word) return;
+	    const trimmed = word.trim();
+	    if (!trimmed) return;
+	    const wordLower = trimmed.toLowerCase();
+
+	    try {
+	      const result = await storage.getLocal(['learnedWords', 'memorizeList']);
+	      const learnedWords = Array.isArray(result.learnedWords) ? result.learnedWords : [];
+	      const memorizeList = Array.isArray(result.memorizeList) ? result.memorizeList : [];
+
+	      const learnedItem = learnedWords.find(w => (w?.original || '').toLowerCase() === wordLower);
+	      const nextLearned = learnedWords.filter(w => (w?.original || '').toLowerCase() !== wordLower);
+
+	      const alreadyInMemorize = memorizeList.some(w => (w?.word || '').toLowerCase() === wordLower);
+	      const nextMemorize = alreadyInMemorize ? memorizeList : memorizeList.concat([{
+	        word: trimmed,
+	        addedAt: Date.now(),
+	        difficulty: learnedItem?.difficulty || 'B1',
+	        translation: learnedItem?.word || ''
+	      }]);
+
+	      await storage.setLocal({ learnedWords: nextLearned, memorizeList: nextMemorize });
+
+	      allLearnedWords = allLearnedWords.filter(w => (w?.original || '').toLowerCase() !== wordLower);
+	      if (!alreadyInMemorize) {
+	        allMemorizeWords = allMemorizeWords.concat([{
+	          original: trimmed,
+	          word: learnedItem?.word || '',
+	          addedAt: Date.now(),
+	          difficulty: learnedItem?.difficulty || 'B1'
+	        }]);
+	      }
+	      filterLearnedWords();
+	      filterMemorizeWords();
+
+	      showOptionsToast(alreadyInMemorize ? '已在需记忆（已从已学会移除）' : '已移到需记忆', { type: 'success', durationMs: 1400 });
+	      loadSettings();
+	    } catch (error) {
+	      console.error('[Sapling] Failed to move learned word to memorize:', error);
+	      showOptionsToast(`操作失败：${error?.message || String(error)}`, { type: 'error', durationMs: 2600 });
+	    }
+	  }
+
+	  async function trimLocalCacheToMaxSize(maxSize) {
+	    const normalized = normalizeCacheMaxSize(maxSize);
+	    return new Promise((resolve) => {
+	      storage.local.get('Sapling_word_cache', (data) => {
+	        const cache = data.Sapling_word_cache || [];
+	        if (!Array.isArray(cache) || cache.length <= normalized) return resolve(false);
+	        const trimmed = cache.slice(-normalized);
+	        storage.local.set({ Sapling_word_cache: trimmed }, () => resolve(true));
+	      });
+	    });
+	  }
 
   // 加载统计数据
   function loadStats(result) {

@@ -599,46 +599,55 @@ class ApiService {
    * @param {function} saveCacheCallback - 保存缓存的回调函数
    * @returns {Promise<Array>} 翻译结果
    */
-  async translateSpecificWords(targetWords, config, cacheMap, updateStatsCallback, saveCacheCallback) {
-    this._maxConcurrentRequests = normalizeConcurrencyLimit(config?.concurrencyLimit, this._maxConcurrentRequests);
+	  async translateSpecificWords(targetWords, config, cacheMap, updateStatsCallback, saveCacheCallback) {
+	    this._maxConcurrentRequests = normalizeConcurrencyLimit(config?.concurrencyLimit, this._maxConcurrentRequests);
 
-    if (!targetWords?.length) {
-      return [];
-    }
+	    if (!targetWords?.length) {
+	      return [];
+	    }
 
-    // 检查 API 配置
-    if (!config.apiKey || !config.apiEndpoint) {
-      const errorDetails = {
-        apiKey: config.apiKey ? '已配置' : '未配置',
-        apiEndpoint: config.apiEndpoint || '未配置',
-        targetWords: targetWords,
-        timestamp: new Date().toISOString()
-      };
-      
-      console.error('[Sapling API Error] API 配置不完整，无法翻译特定单词');
-      console.error('[Sapling API Error] 详细信息:', errorDetails);
+	    const normalizedTargetWords = targetWords
+	      .filter(w => typeof w === 'string')
+	      .map(w => w.trim())
+	      .filter(Boolean);
+
+	    if (normalizedTargetWords.length === 0) {
+	      return [];
+	    }
+
+	    // 检查 API 配置
+	    if (!config.apiKey || !config.apiEndpoint) {
+	      const errorDetails = {
+	        apiKey: config.apiKey ? '已配置' : '未配置',
+	        apiEndpoint: config.apiEndpoint || '未配置',
+	        targetWords: normalizedTargetWords,
+	        timestamp: new Date().toISOString()
+	      };
+	      
+	      console.error('[Sapling API Error] API 配置不完整，无法翻译特定单词');
+	      console.error('[Sapling API Error] 详细信息:', errorDetails);
       console.error('[Sapling API Error] 请前往插件设置页面配置 API Key 和 API 端点');
       
       const error = new Error(!config.apiKey ? 'API Key 未配置，请前往设置页面配置' : 'API 端点未配置，请前往设置页面配置');
       error.code = 'API_NOT_CONFIGURED';
       error.details = errorDetails;
-      throw error;
-    }
+	      throw error;
+	    }
 
-    const sourceLang = await detectLanguage(targetWords.join(' '));
-    const targetLang = sourceLang === config.nativeLanguage ? config.targetLanguage : config.nativeLanguage;
-    const maxCacheSize = normalizeCacheMaxSize(config?.cacheMaxSize, CACHE_CONFIG.maxSize);
+	    const sourceLang = await detectLanguage(normalizedTargetWords.join(' '));
+	    const targetLang = sourceLang === config.nativeLanguage ? config.targetLanguage : config.nativeLanguage;
+	    const maxCacheSize = normalizeCacheMaxSize(config?.cacheMaxSize, CACHE_CONFIG.maxSize);
 
-    const uncached = [];
-    const cached = [];
+	    const uncached = [];
+	    const cached = [];
 
-    // 检查缓存
-    for (const word of targetWords) {
-      const key = `${word.toLowerCase()}:${sourceLang}:${targetLang}`;
-      if (cacheMap.has(key)) {
-        // LRU: 访问时移到末尾
-        const cachedItem = cacheMap.get(key);
-        cacheMap.delete(key);
+	    // 检查缓存
+	    for (const word of normalizedTargetWords) {
+	      const key = `${word.toLowerCase()}:${sourceLang}:${targetLang}`;
+	      if (cacheMap.has(key)) {
+	        // LRU: 访问时移到末尾
+	        const cachedItem = cacheMap.get(key);
+	        cacheMap.delete(key);
         cacheMap.set(key, cachedItem);
         cached.push({ word, ...cachedItem });
       } else {
@@ -668,10 +677,10 @@ class ApiService {
         });
 
         // 用户消息只包含要翻译的单词列表（逗号分隔）
-        const userPrompt = uncached.join(', ');
+	        const userPrompt = uncached.join(', ');
 
-        const apiResults = await this._runLimited(async () => {
-          let response;
+	        const apiResults = await this._runLimited(async () => {
+	          let response;
           try {
             response = await fetch(config.apiEndpoint, {
               method: 'POST',
@@ -744,17 +753,35 @@ class ApiService {
             throw error;
           }
 
-          const data = await response.json();
-          const content = data.choices?.[0]?.message?.content || '[]';
-          return this.parseApiResponse(content);
-        });
+	          const data = await response.json();
+	          const content = data.choices?.[0]?.message?.content || '[]';
+	          return this.parseApiResponse(content);
+	        });
 
-        // 缓存结果
-        for (const item of apiResults) {
-          const word = item.original || '';
-          if (isNonLearningWord(word)) continue;
+	        const normalizedApiResults = apiResults
+	          .map((item) => {
+	            if (!item) return null;
+	            const candidate = typeof item === 'object' ? item : {};
+	            const original = typeof candidate.original === 'string'
+	              ? candidate.original
+	              : (typeof candidate.word === 'string' ? candidate.word : '');
+	            const translation = typeof candidate.translation === 'string'
+	              ? candidate.translation
+	              : (typeof candidate.meaning === 'string' ? candidate.meaning : '');
+	            return {
+	              ...candidate,
+	              original,
+	              translation
+	            };
+	          })
+	          .filter(item => item && typeof item.original === 'string' && item.original && typeof item.translation === 'string' && item.translation);
 
-          const isChinese = /[\u4e00-\u9fff]/.test(word);
+	        // 缓存结果
+	        for (const item of normalizedApiResults) {
+	          const word = item.original || '';
+	          if (isNonLearningWord(word)) continue;
+
+	          const isChinese = /[\u4e00-\u9fff]/.test(word);
           if (isChinese && word.length < 2) continue;
 
           const isEnglish = /^[a-zA-Z]+$/.test(word);
@@ -779,8 +806,8 @@ class ApiService {
             partOfSpeech: item.partOfSpeech || '',
             shortDefinition: item.shortDefinition || '',
             example: item.example || ''
-          });
-        }
+	          });
+	        }
 
         // 保存缓存：best-effort，避免阻塞后续段落/请求调度
         try {
@@ -789,29 +816,31 @@ class ApiService {
           // ignore
         }
 
-        // 为 API 结果添加 sourceLang
-        const apiResultsWithLang = apiResults.map(item => ({
-          ...item,
-          sourceLang
-        }));
+	        // 为 API 结果添加 sourceLang
+	        const apiResultsWithLang = normalizedApiResults.map(item => ({
+	          ...item,
+	          sourceLang
+	        }));
 
-        allResults = [...allResults, ...apiResultsWithLang];
+	        allResults = [...allResults, ...apiResultsWithLang];
 
-        // 更新统计
-        updateStatsCallback({ newWords: apiResults.length, cacheHits: cached.length, cacheMisses: 1 });
+	        // 更新统计
+	        updateStatsCallback({ newWords: normalizedApiResults.length, cacheHits: cached.length, cacheMisses: 1 });
 
-      } catch (error) {
-        console.error('[Sapling] translateSpecificWords error:', error);
-        // 重新抛出错误，让调用方处理并显示提示
+	      } catch (error) {
+	        console.error('[Sapling] translateSpecificWords error:', error);
+	        // 重新抛出错误，让调用方处理并显示提示
         throw error;
       }
     }
 
-    return allResults.filter(item =>
-      targetWords.some(w => w.toLowerCase() === item.original.toLowerCase()) &&
-      !isNonLearningWord(item.original)
-    );
-  }
+	    return allResults.filter(item =>
+	      typeof item?.original === 'string' &&
+	      typeof item?.translation === 'string' &&
+	      normalizedTargetWords.some(w => w.toLowerCase() === item.original.toLowerCase()) &&
+	      !isNonLearningWord(item.original)
+	    );
+	  }
 }
 
 // 导出单例

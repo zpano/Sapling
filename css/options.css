@@ -578,9 +578,66 @@ input:checked + .toggle-slider:before {
   font-size: 13px;
 }
 
+.memorize-translation {
+  transition: filter 0.16s ease, opacity 0.16s ease;
+}
+
+.memorize-translation--masked {
+  filter: blur(6px);
+  opacity: 0.9;
+  cursor: pointer;
+  user-select: none;
+}
+
+.word-item:hover .memorize-translation--masked {
+  filter: blur(3px);
+  opacity: 0.95;
+}
+
+.memorize-translation--revealed {
+  filter: none;
+  opacity: 1;
+  cursor: text;
+  user-select: text;
+}
+
 .word-date {
   color: var(--text-muted);
   font-size: 12px;
+}
+
+.word-mark-learned {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+.word-mark-learned:hover {
+  background: rgba(34, 197, 94, 0.18);
+  color: var(--success);
+}
+
+.word-mark-memorize {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+.word-mark-memorize:hover {
+  background: rgba(59, 130, 246, 0.18);
+  color: var(--primary);
 }
 
 .word-remove {
