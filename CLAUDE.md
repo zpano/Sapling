@@ -149,6 +149,3 @@ The storage system uses a 4-layer architecture for flexibility and future extens
 | Change storage behavior | `js/core/storage/StorageService.js`, `js/core/storage/ChromeStorageAdapter.js` |
 | Add new storage backend | Create new adapter implementing `js/core/storage/IStorageAdapter.js` |
 | Update popup/options UI | `js/popup.js`, `js/options.js`, corresponding HTML/CSS |
-
-# User Custom Rules
-1. Use auggie mcp to get code context > built-in tools > shell commands

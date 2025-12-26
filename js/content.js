@@ -69,10 +69,18 @@ async function loadConfig() {
     const applyConfig = (result = {}) => {
       console.log('[Sapling] Applying config:', result);
       const safeResult = result || {};
+      const apiProfiles = Array.isArray(safeResult.apiProfiles) ? safeResult.apiProfiles : [];
+      const activeApiProfileId = typeof safeResult.activeApiProfileId === 'string'
+        ? safeResult.activeApiProfileId
+        : null;
+      const activeApiProfile = activeApiProfileId
+        ? apiProfiles.find(profile => profile?.id === activeApiProfileId)
+        : null;
+
       config = {
-        apiEndpoint: safeResult.apiEndpoint || 'https://api.deepseek.com/chat/completions',
-        apiKey: safeResult.apiKey || '',
-        modelName: safeResult.modelName || 'deepseek-chat',
+        apiEndpoint: activeApiProfile?.apiEndpoint || safeResult.apiEndpoint || 'https://api.deepseek.com/chat/completions',
+        apiKey: activeApiProfile?.apiKey || safeResult.apiKey || '',
+        modelName: activeApiProfile?.modelName || safeResult.modelName || 'deepseek-chat',
         nativeLanguage: safeResult.nativeLanguage || 'zh-CN',
         targetLanguage: safeResult.targetLanguage || 'en',
         difficultyLevel: safeResult.difficultyLevel || 'B1',

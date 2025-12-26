@@ -4,6 +4,9 @@
 
 import { VocabTest, CEFR_DESCRIPTIONS } from './services/vocab-test.js';
 import { storage } from './core/storage/StorageService.js';
+import { applyThemeVariables } from './utils/color-utils.js';
+import { DEFAULT_THEME } from './core/config.js';
+import { getModalController } from './ui/modal.js';
 
 // DOM 元素
 const welcomeScreen = document.getElementById('welcomeScreen');
@@ -33,6 +36,13 @@ let vocabTest = null;
  * 初始化
  */
 document.addEventListener('DOMContentLoaded', () => {
+  const modal = getModalController();
+
+  storage.remote.get('theme', (result) => {
+    const theme = { ...DEFAULT_THEME, ...(result?.theme || {}) };
+    applyThemeVariables(theme, DEFAULT_THEME);
+  });
+
   // 检查是否已经完成过测试
   storage.remote.get(['vocabTestCompleted', 'difficultyLevel'], (result) => {
     if (result.vocabTestCompleted) {
@@ -53,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * 开始测试
  */
 async function startTest() {
+  const modal = getModalController();
   vocabTest = new VocabTest();
   
   // 显示加载界面
@@ -68,7 +79,7 @@ async function startTest() {
     showNextWord();
   } catch (error) {
     console.error('[Sapling] Failed to start vocab test:', error);
-    alert('加载单词表失败，请刷新页面重试');
+    await modal.alert('加载单词表失败，请刷新页面重试', { title: '加载失败' });
   }
 }
 
@@ -76,7 +87,12 @@ async function startTest() {
  * 跳过测试（使用默认 B1 等级）
  */
 async function skipTest() {
-  const confirmed = confirm('跳过测试将使用默认的 B1 (进阶级) 难度等级。您确定要跳过吗？');
+  const modal = getModalController();
+  const confirmed = await modal.confirm('跳过测试将使用默认的 B1 (进阶级) 难度等级。您确定要跳过吗？', {
+    title: '跳过测试',
+    confirmText: '跳过',
+    danger: true
+  });
   if (!confirmed) return;
 
   showScreen('loading');
@@ -239,4 +255,3 @@ function showScreen(screen) {
 // 为单词和例句添加过渡动画
 wordDisplay.style.transition = 'opacity 0.3s ease';
 exampleDisplay.style.transition = 'opacity 0.3s ease';
-

@@ -4,6 +4,8 @@
 
 import { normalizeHexColor, applyThemeVariables } from './utils/color-utils.js';
 import { storage } from './core/storage/StorageService.js';
+import { getModalController } from './ui/modal.js';
+import { initCustomSelects } from './ui/custom-select.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // API 预设
@@ -14,6 +16,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     groq: { endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.1-8b-instant' },
     ollama: { endpoint: 'http://localhost:11434/v1/chat/completions', model: 'qwen2.5:7b' }
   };
+
+  function generateApiProfileId() {
+    return `api_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function sanitizeApiProfiles(value) {
+    const list = Array.isArray(value) ? value : [];
+    const seen = new Set();
+    const sanitized = [];
+
+    for (const raw of list) {
+      const id = typeof raw?.id === 'string' ? raw.id.trim() : '';
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+
+      const name = typeof raw?.name === 'string' ? raw.name.trim() : '';
+      sanitized.push({
+        id,
+        name: name || '未命名配置',
+        apiEndpoint: typeof raw?.apiEndpoint === 'string' ? raw.apiEndpoint : '',
+        apiKey: typeof raw?.apiKey === 'string' ? raw.apiKey : '',
+        modelName: typeof raw?.modelName === 'string' ? raw.modelName : ''
+      });
+    }
+
+    return sanitized;
+  }
+
+  function suggestNextApiProfileName(profiles) {
+    const base = '自定义配置';
+    const existing = new Set((profiles || []).map(p => String(p?.name || '').trim()));
+    if (!existing.has(base)) return base;
+    for (let i = 2; i < 1000; i++) {
+      const candidate = `${base} ${i}`;
+      if (!existing.has(candidate)) return candidate;
+    }
+    return `${base} ${Date.now()}`;
+  }
 
   const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
   const CACHE_MAX_SIZE_STEP = 1024;
@@ -69,7 +109,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     sections: document.querySelectorAll('.settings-section'),
 
     // API 配置
-    presetBtns: document.querySelectorAll('.preset-btn'),
+    presetBtns: document.querySelectorAll('.preset-buttons .preset-btn[data-preset]'),
+    addApiProfileBtn: document.getElementById('addApiProfileBtn'),
+    apiProfileButtons: document.getElementById('apiProfileButtons'),
+    renameApiProfileBtn: document.getElementById('renameApiProfileBtn'),
+    deleteApiProfileBtn: document.getElementById('deleteApiProfileBtn'),
     apiEndpoint: document.getElementById('apiEndpoint'),
     apiKey: document.getElementById('apiKey'),
     modelName: document.getElementById('modelName'),
@@ -164,6 +208,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   let saveQueue = Promise.resolve();
   let lastAutoSaveToastAt = 0;
   let lastAutoSaveErrorToastAt = 0;
+
+  let apiProfiles = [];
+  let activeApiProfileId = null;
+
+  const modal = getModalController();
+  const customSelects = initCustomSelects(
+    [elements.nativeLanguage, elements.targetLanguage, elements.pronunciationProvider, elements.youdaoPronunciationType],
+    { onOpen: () => modal.close() }
+  );
 
   function showOptionsToast(message, { type = 'success', durationMs = 2200 } = {}) {
     const container = elements.optionsToastContainer;
@@ -296,10 +349,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function loadSettings() {
     // 从 sync 获取配置，从 local 获取词汇列表
     storage.remote.get(null, (syncResult) => {
+      apiProfiles = sanitizeApiProfiles(syncResult.apiProfiles);
+      activeApiProfileId = typeof syncResult.activeApiProfileId === 'string'
+        ? syncResult.activeApiProfileId
+        : null;
+      if (!apiProfiles.some(profile => profile.id === activeApiProfileId)) {
+        activeApiProfileId = null;
+      }
+
+      const activeProfile = activeApiProfileId
+        ? apiProfiles.find(profile => profile.id === activeApiProfileId)
+        : null;
+
       // API 配置
-      elements.apiEndpoint.value = syncResult.apiEndpoint || API_PRESETS.deepseek.endpoint;
-      elements.apiKey.value = syncResult.apiKey || '';
-      elements.modelName.value = syncResult.modelName || API_PRESETS.deepseek.model;
+      elements.apiEndpoint.value = activeProfile?.apiEndpoint || syncResult.apiEndpoint || API_PRESETS.deepseek.endpoint;
+      elements.apiKey.value = activeProfile?.apiKey || syncResult.apiKey || '';
+      elements.modelName.value = activeProfile?.modelName || syncResult.modelName || API_PRESETS.deepseek.model;
+      renderApiProfiles();
 
       // 学习偏好
       elements.nativeLanguage.value = syncResult.nativeLanguage || 'zh-CN';
@@ -322,6 +388,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       elements.pronunciationProvider.value = syncResult.pronunciationProvider || 'wiktionary';
       elements.youdaoPronunciationType.value = String(syncResult.youdaoPronunciationType ?? 2);
       updatePronunciationSettingsVisibility();
+      customSelects.syncAll();
 
       const translationStyle = syncResult.translationStyle || 'original-translation';
       elements.translationStyleRadios.forEach(radio => {
@@ -367,6 +434,141 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  function updateActiveApiProfileFromUI() {
+    if (!activeApiProfileId) return;
+    const idx = apiProfiles.findIndex(profile => profile.id === activeApiProfileId);
+    if (idx < 0) return;
+
+    apiProfiles[idx] = {
+      ...apiProfiles[idx],
+      apiEndpoint: elements.apiEndpoint.value.trim(),
+      apiKey: elements.apiKey.value.trim(),
+      modelName: elements.modelName.value.trim()
+    };
+  }
+
+  function setActiveApiProfileId(nextId) {
+    activeApiProfileId = nextId && apiProfiles.some(profile => profile.id === nextId) ? nextId : null;
+  }
+
+  function updateApiProfileActions() {
+    const hasActive = Boolean(activeApiProfileId && apiProfiles.some(profile => profile.id === activeApiProfileId));
+    if (elements.renameApiProfileBtn) elements.renameApiProfileBtn.disabled = !hasActive;
+    if (elements.deleteApiProfileBtn) elements.deleteApiProfileBtn.disabled = !hasActive;
+  }
+
+  function renderApiProfiles() {
+    const container = elements.apiProfileButtons;
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!apiProfiles.length) {
+      const empty = document.createElement('span');
+      empty.className = 'text-muted';
+      empty.textContent = '暂无自定义配置';
+      container.appendChild(empty);
+      updateApiProfileActions();
+      return;
+    }
+
+    apiProfiles.forEach((profile) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `preset-btn api-profile-btn${profile.id === activeApiProfileId ? ' active' : ''}`;
+      btn.textContent = profile.name;
+      btn.dataset.profileId = profile.id;
+
+      btn.addEventListener('click', () => activateApiProfile(profile.id));
+      btn.addEventListener('dblclick', () => renameApiProfile(profile.id));
+
+      container.appendChild(btn);
+    });
+
+    updateApiProfileActions();
+  }
+
+  function activateApiProfile(profileId) {
+    updateActiveApiProfileFromUI();
+
+    const profile = apiProfiles.find(p => p.id === profileId);
+    if (!profile) return;
+
+    setActiveApiProfileId(profile.id);
+    elements.apiEndpoint.value = profile.apiEndpoint || '';
+    elements.apiKey.value = profile.apiKey || '';
+    elements.modelName.value = profile.modelName || '';
+
+    elements.presetBtns.forEach(b => b.classList.remove('active'));
+    renderApiProfiles();
+    debouncedSave(200);
+  }
+
+  async function addApiProfile() {
+    updateActiveApiProfileFromUI();
+
+    const suggestedName = suggestNextApiProfileName(apiProfiles);
+    const rawName = await modal.prompt('新配置名称：', { title: '新增自定义配置', defaultValue: suggestedName, placeholder: suggestedName });
+    if (rawName === null) return;
+
+    const name = String(rawName).trim() || suggestedName;
+    const profile = {
+      id: generateApiProfileId(),
+      name,
+      apiEndpoint: elements.apiEndpoint.value.trim(),
+      apiKey: elements.apiKey.value.trim(),
+      modelName: elements.modelName.value.trim()
+    };
+
+    apiProfiles = [...apiProfiles, profile];
+    setActiveApiProfileId(profile.id);
+    renderApiProfiles();
+    debouncedSave(0);
+    showOptionsToast('已新增自定义配置', { type: 'success', durationMs: 1600 });
+  }
+
+  async function renameApiProfile(profileId = activeApiProfileId) {
+    const profile = apiProfiles.find(p => p.id === profileId);
+    if (!profile) return;
+
+    const rawName = await modal.prompt('重命名配置：', { title: '重命名', defaultValue: profile.name, placeholder: profile.name });
+    if (rawName === null) return;
+
+    const nextName = String(rawName).trim();
+    if (!nextName) return;
+
+    apiProfiles = apiProfiles.map(p => (p.id === profile.id ? { ...p, name: nextName } : p));
+    renderApiProfiles();
+    debouncedSave(0);
+    showOptionsToast('已重命名', { type: 'success', durationMs: 1400 });
+  }
+
+  async function deleteApiProfile(profileId = activeApiProfileId) {
+    const profile = apiProfiles.find(p => p.id === profileId);
+    if (!profile) return;
+
+    const ok = await modal.confirm(`确定删除「${profile.name}」吗？`, { title: '删除配置', confirmText: '删除', danger: true });
+    if (!ok) return;
+
+    apiProfiles = apiProfiles.filter(p => p.id !== profileId);
+    if (activeApiProfileId === profileId) {
+      activeApiProfileId = apiProfiles[0]?.id || null;
+    }
+
+    if (activeApiProfileId) {
+      const nextActive = apiProfiles.find(p => p.id === activeApiProfileId);
+      if (nextActive) {
+        elements.apiEndpoint.value = nextActive.apiEndpoint || '';
+        elements.apiKey.value = nextActive.apiKey || '';
+        elements.modelName.value = nextActive.modelName || '';
+      }
+    }
+
+    elements.presetBtns.forEach(b => b.classList.remove('active'));
+    renderApiProfiles();
+    debouncedSave(0);
+    showOptionsToast('已删除', { type: 'success', durationMs: 1400 });
+  }
+
   function updatePronunciationSettingsVisibility() {
     const provider = elements.pronunciationProvider?.value || 'wiktionary';
     const targetLanguage = elements.targetLanguage?.value || 'en';
@@ -374,6 +576,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (elements.youdaoPronunciationSettings) elements.youdaoPronunciationSettings.hidden = !useYoudao;
     if (elements.youdaoPronunciationType) elements.youdaoPronunciationType.disabled = !useYoudao;
+    customSelects.sync(elements.youdaoPronunciationType);
   }
 
   // 存储原始数据（用于搜索和筛选）
@@ -607,10 +810,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const normalizedMaxBatchSize = normalizeMaxBatchSize(elements.maxBatchSize?.value);
     if (elements.maxBatchSize) elements.maxBatchSize.value = String(normalizedMaxBatchSize);
 
+    updateActiveApiProfileFromUI();
+
     return {
       apiEndpoint: elements.apiEndpoint.value.trim(),
       apiKey: elements.apiKey.value.trim(),
       modelName: elements.modelName.value.trim(),
+      apiProfiles,
+      activeApiProfileId,
       nativeLanguage: elements.nativeLanguage.value,
       targetLanguage: elements.targetLanguage.value,
       difficultyLevel: CEFR_LEVELS[elements.difficultyLevel.value],
@@ -843,6 +1050,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
+    if (elements.addApiProfileBtn) {
+      elements.addApiProfileBtn.addEventListener('click', () => addApiProfile());
+    }
+    if (elements.renameApiProfileBtn) {
+      elements.renameApiProfileBtn.addEventListener('click', () => renameApiProfile());
+    }
+    if (elements.deleteApiProfileBtn) {
+      elements.deleteApiProfileBtn.addEventListener('click', () => deleteApiProfile());
+    }
+
     // 切换 API 密钥可见性
     elements.toggleApiKey.addEventListener('click', () => {
       const type = elements.apiKey.type === 'password' ? 'text' : 'password';
@@ -965,31 +1182,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // 清空按钮
-    elements.clearLearnedBtn.addEventListener('click', () => {
-      if (confirm('确定要清空所有已学会词汇吗？')) {
-        chrome.runtime.sendMessage({ action: 'clearLearnedWords' }, () => {
-          loadSettings();
-          debouncedSave(200);
-        });
-      }
+    elements.clearLearnedBtn.addEventListener('click', async () => {
+      const ok = await modal.confirm('确定要清空所有已学会词汇吗？', { title: '清空已学会词汇', confirmText: '清空', danger: true });
+      if (!ok) return;
+      chrome.runtime.sendMessage({ action: 'clearLearnedWords' }, () => {
+        loadSettings();
+        debouncedSave(200);
+      });
     });
 
-    elements.clearMemorizeBtn.addEventListener('click', () => {
-      if (confirm('确定要清空需记忆列表吗？')) {
-        chrome.runtime.sendMessage({ action: 'clearMemorizeList' }, () => {
-          loadSettings();
-          debouncedSave(200);
-        });
-      }
+    elements.clearMemorizeBtn.addEventListener('click', async () => {
+      const ok = await modal.confirm('确定要清空需记忆列表吗？', { title: '清空需记忆列表', confirmText: '清空', danger: true });
+      if (!ok) return;
+      chrome.runtime.sendMessage({ action: 'clearMemorizeList' }, () => {
+        loadSettings();
+        debouncedSave(200);
+      });
     });
 
-    elements.clearCacheBtn.addEventListener('click', () => {
-      if (confirm('确定要清空词汇缓存吗？')) {
-        chrome.runtime.sendMessage({ action: 'clearCache' }, () => {
-          loadSettings();
-          debouncedSave(200);
-        });
-      }
+    elements.clearCacheBtn.addEventListener('click', async () => {
+      const ok = await modal.confirm('确定要清空词汇缓存吗？', { title: '清空缓存', confirmText: '清空', danger: true });
+      if (!ok) return;
+      chrome.runtime.sendMessage({ action: 'clearCache' }, () => {
+        loadSettings();
+        debouncedSave(200);
+      });
     });
 
     // 统计重置
@@ -1000,21 +1217,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
 
-    elements.resetAllBtn.addEventListener('click', () => {
-      if (confirm('确定要重置所有数据吗？这将清空所有统计和词汇列表。')) {
-        storage.remote.set({
-          totalWords: 0,
-          todayWords: 0,
-          cacheHits: 0,
-          cacheMisses: 0,
-          learnedWords: [],
-          memorizeList: []
-        }, () => {});
-        storage.local.remove('Sapling_word_cache', () => {
-          loadSettings();
-          debouncedSave(200);
-        });
-      }
+    elements.resetAllBtn.addEventListener('click', async () => {
+      const ok = await modal.confirm('确定要重置所有数据吗？这将清空所有统计和词汇列表。', { title: '重置所有数据', confirmText: '重置', danger: true });
+      if (!ok) return;
+      storage.remote.set({
+        totalWords: 0,
+        todayWords: 0,
+        cacheHits: 0,
+        cacheMisses: 0,
+        learnedWords: [],
+        memorizeList: []
+      }, () => {});
+      storage.local.remove('Sapling_word_cache', () => {
+        loadSettings();
+        debouncedSave(200);
+      });
     });
 
     // 添加自动保存事件监听器

@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sapling 设置</title>
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/ui-controls.css">
   <link rel="stylesheet" href="css/options.css">
 </head>
 <body>
@@ -82,7 +84,20 @@
             <button class="preset-btn" data-preset="moonshot">Moonshot</button>
             <button class="preset-btn" data-preset="groq">Groq</button>
             <button class="preset-btn" data-preset="ollama">Ollama</button>
+            <button type="button" class="preset-btn preset-add-btn" id="addApiProfileBtn" title="新增自定义配置">+</button>
           </div>
+        </div>
+
+        <div class="form-group">
+          <label>自定义配置</label>
+          <div class="api-profile-bar">
+            <div class="api-profile-buttons" id="apiProfileButtons"></div>
+            <div class="api-profile-actions">
+              <button type="button" class="preset-btn api-profile-action-btn" id="renameApiProfileBtn" disabled>重命名</button>
+              <button type="button" class="preset-btn api-profile-action-btn danger" id="deleteApiProfileBtn" disabled>删除</button>
+            </div>
+          </div>
+          <p class="help-text">点击上方 + 保存当前填写的 API 配置为自定义模板，可保存多个并随时切换。</p>
         </div>
 
         <div class="form-group">
