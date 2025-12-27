@@ -7,6 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const esbuild = require('esbuild');
+const { bundleToon } = require('./build-toon');
 
 // ===== 打包 segmentit =====
 async function bundleSegmentit() {
@@ -125,6 +126,7 @@ async function bundleVocabTest() {
 // ===== 主函数 =====
 async function main() {
   await bundleSegmentit();
+  await bundleToon();
   await bundleContentScript();
   await bundleVocabTest();
   console.log('');

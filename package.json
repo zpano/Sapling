@@ -16,6 +16,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@toon-format/toon": "^2.1.0",
     "segmentit": "^2.0.3"
   },
   "devDependencies": {

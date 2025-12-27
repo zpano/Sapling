@@ -113,6 +113,9 @@ export const DEFAULT_CONFIG = {
   maxBatchSize: 3,
   processFullPage: false,
 
+  // TOON 格式设置
+  outputFormat: 'toon',  // 'standard' | 'toon'
+
   // 主题配色
   theme: { ...DEFAULT_THEME },
 

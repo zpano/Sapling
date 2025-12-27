@@ -193,6 +193,16 @@ body {
   margin-bottom: 4px;
 }
 
+.help-text a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.help-text a:hover {
+  color: var(--primary-light);
+  text-decoration: underline;
+}
+
 /* Input with Toggle */
 .input-with-toggle {
   position: relative;

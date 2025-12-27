@@ -95,6 +95,7 @@ async function loadConfig() {
         cacheMaxSize: normalizeCacheMaxSize(safeResult.cacheMaxSize, CACHE_CONFIG.maxSize),
         concurrencyLimit: normalizeConcurrencyLimit(safeResult.concurrencyLimit),
         maxBatchSize: normalizeMaxBatchSize(safeResult.maxBatchSize),
+        outputFormat: safeResult.outputFormat || 'standard',
         theme: { ...DEFAULT_THEME, ...(safeResult.theme || {}) },
         enabled: safeResult.enabled ?? true,
         blacklist: safeResult.blacklist || [],

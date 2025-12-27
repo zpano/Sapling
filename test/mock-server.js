@@ -102,33 +102,142 @@ function truncateText(text, maxLen = 20) {
 }
 
 /**
+ * 将词汇数据编码为 TOON 格式（批量翻译）
+ * 格式：扁平化表格，每行包含 paragraphIndex
+ */
+function encodeToonBatch(results) {
+  if (!results || results.length === 0) {
+    return '[0]{paragraphIndex,original,translation,phonetic,difficulty,partOfSpeech,shortDefinition,example}:';
+  }
+
+  // 扁平化：将所有段落的 words 合并到一个数组，每个词添加 paragraphIndex
+  const flatWords = [];
+  for (const para of results) {
+    const paragraphIndex = para.paragraphIndex ?? 0;
+    for (const word of para.words || []) {
+      flatWords.push({
+        paragraphIndex,
+        ...word
+      });
+    }
+  }
+
+  if (flatWords.length === 0) {
+    return '[0]{paragraphIndex,original,translation,phonetic,difficulty,partOfSpeech,shortDefinition,example}:';
+  }
+
+  // 构建 TOON 表头
+  const fields = ['paragraphIndex', 'original', 'translation', 'phonetic', 'difficulty', 'partOfSpeech', 'shortDefinition', 'example'];
+  const header = `[${flatWords.length}]{${fields.join(',')}}:`;
+
+  // 构建数据行
+  const rows = flatWords.map(word => {
+    const values = fields.map(field => {
+      const value = word[field];
+      if (value === undefined || value === null) return '';
+
+      const strValue = String(value);
+      // 如果包含逗号、换行或引号，需要用双引号包裹并转义内部引号
+      if (strValue.includes(',') || strValue.includes('\n') || strValue.includes('"')) {
+        return `"${strValue.replace(/"/g, '\\"')}"`;
+      }
+      return strValue;
+    });
+    return '  ' + values.join(',');
+  });
+
+  return header + '\n' + rows.join('\n');
+}
+
+/**
+ * 将词汇数据编码为 TOON 格式（单个数组）
+ * 用于特定单词翻译
+ */
+function encodeToonArray(words) {
+  if (!words || words.length === 0) {
+    return '[0]{original,translation,phonetic,difficulty,partOfSpeech,shortDefinition,example}:';
+  }
+
+  // 构建 TOON 表头
+  const fields = ['original', 'translation', 'phonetic', 'difficulty', 'partOfSpeech', 'shortDefinition', 'example'];
+  const header = `[${words.length}]{${fields.join(',')}}:`;
+
+  // 构建数据行
+  const rows = words.map(word => {
+    const values = fields.map(field => {
+      const value = word[field];
+      if (value === undefined || value === null) return '';
+
+      const strValue = String(value);
+      // 如果包含逗号、换行或引号，需要用双引号包裹并转义内部引号
+      if (strValue.includes(',') || strValue.includes('\n') || strValue.includes('"')) {
+        return `"${strValue.replace(/"/g, '\\"')}"`;
+      }
+      return strValue;
+    });
+    return '  ' + values.join(',');
+  });
+
+  return header + '\n' + rows.join('\n');
+}
+
+/**
+ * 检测请求中的输出格式
+ */
+function detectOutputFormat(requestBody) {
+  const systemMessage = requestBody.messages?.find(m => m.role === 'system')?.content || '';
+
+  // 检查是否包含 TOON 格式关键词
+  if (systemMessage.includes('TOON format') || systemMessage.includes('TOON ENCODING')) {
+    return 'toon';
+  }
+
+  return 'standard';
+}
+
+/**
  * 生成 Mock 响应
- * @returns {{ response: object, paragraphPreviews: Array<{index: number, preview: string, lang: string, wordsCount: number}>, sourceLang: string, targetLang: string }}
+ * @returns {{ response: object, paragraphPreviews: Array<{index: number, preview: string, lang: string, wordsCount: number}>, sourceLang: string, targetLang: string, outputFormat: string }}
  */
 function generateMockResponse(requestBody) {
   const userMessage = requestBody.messages?.find(m => m.role === 'user')?.content || '';
 
-  // 用更简单的方式提取段落：先按 --- 分割，再提取每个段落的索引和内容
-  // prompt 中的分隔符是 \n\n---\n\n
-  const sections = userMessage.split(/\n+---\n+/).filter(s => s.trim());
+  // 检测输出格式
+  const outputFormat = detectOutputFormat(requestBody);
+
+  // 提取段落：支持新格式（\n\n 分隔，<index>: 开头）
   let results = [];
   let paragraphPreviews = [];
   let sourceLang = '';
   let targetLang = '';
+  let isBatchTranslation = false;
 
-  for (const section of sections) {
-    // 匹配 [Paragraph X] (sourceLang → targetLang): 格式
-    const headerMatch = section.match(/\[Paragraph (\d+)\]\s*\(([^→]+)\s*→\s*([^)]+)\):\s*/);
+  // 尝试按照新格式分割（\n\n 分隔段落）
+  const newFormatSections = userMessage.split(/\n\n+/).filter(s => s.trim());
+  const paragraphMatches = [];
+
+  for (const section of newFormatSections) {
+    // 匹配新格式 0:, 1:, 2: 在行首
+    const headerMatch = section.match(/^(\d+):\s*\n?(.*)$/s);
     if (headerMatch) {
-      const paragraphIndex = parseInt(headerMatch[1]);
-      // 提取语言信息（只取第一个段落的）
-      if (!sourceLang) {
-        sourceLang = headerMatch[2].trim();
-        targetLang = headerMatch[3].trim();
-      }
+      paragraphMatches.push({
+        index: parseInt(headerMatch[1]),
+        text: headerMatch[2].trim()
+      });
+    }
+  }
 
-      const paragraphText = section.slice(headerMatch[0].length).trim();
+  // 如果找到了新格式段落，处理它们
+  if (paragraphMatches.length > 0) {
+    isBatchTranslation = true;
+
+    for (const { index: paragraphIndex, text: paragraphText } of paragraphMatches) {
+      // 从文本内容推断语言
       const lang = detectLanguage(paragraphText);
+      if (!sourceLang) {
+        sourceLang = lang;
+        targetLang = lang === 'zh' ? 'en' : 'zh-CN';
+      }
       const wordBank = lang === 'zh' ? MOCK_WORDS.zh : MOCK_WORDS.en;
       const words = findMatchingWords(paragraphText, wordBank);
 
@@ -170,6 +279,22 @@ function generateMockResponse(requestBody) {
     }];
   }
 
+  // 根据输出格式生成内容
+  let content;
+  if (outputFormat === 'toon') {
+    if (isBatchTranslation) {
+      // 批量翻译：使用扁平化 TOON 格式
+      content = encodeToonBatch(results);
+    } else {
+      // 特定单词：使用数组 TOON 格式
+      const allWords = results.flatMap(r => r.words || []);
+      content = encodeToonArray(allWords);
+    }
+  } else {
+    // 标准 JSON 格式
+    content = JSON.stringify(results);
+  }
+
   return {
     response: {
       id: 'mock-' + Date.now(),
@@ -180,7 +305,7 @@ function generateMockResponse(requestBody) {
         index: 0,
         message: {
           role: 'assistant',
-          content: JSON.stringify(results)
+          content
         },
         finish_reason: 'stop'
       }],
@@ -192,7 +317,8 @@ function generateMockResponse(requestBody) {
     },
     paragraphPreviews,
     sourceLang,
-    targetLang
+    targetLang,
+    outputFormat
   };
 }
 
@@ -206,10 +332,11 @@ function processResponseQueue() {
   if (isProcessingQueue || responseQueue.length === 0) return;
 
   isProcessingQueue = true;
-  const { res, response, requestId, paragraphPreviews, sourceLang, targetLang } = responseQueue.shift();
+  const { res, response, requestId, paragraphPreviews, sourceLang, targetLang, outputFormat } = responseQueue.shift();
 
   console.log('');
   console.log(`┌─ 响应 #${requestId} ────────────────────────────────────────`);
+  console.log(`│  格式: ${outputFormat === 'toon' ? '🎯 TOON' : '📋 JSON'}`);
   console.log(`│  方向: ${sourceLang} → ${targetLang}`);
   console.log(`│  段落数: ${paragraphPreviews.length}`);
   paragraphPreviews.forEach(p => {
@@ -258,12 +385,13 @@ const server = http.createServer((req, res) => {
         const requestBody = JSON.parse(body);
 
         // 生成响应并获取详细信息
-        const { response, paragraphPreviews, sourceLang, targetLang } = generateMockResponse(requestBody);
+        const { response, paragraphPreviews, sourceLang, targetLang, outputFormat } = generateMockResponse(requestBody);
 
         // 打印请求日志
         console.log('');
         console.log(`┌─ 请求 #${requestId} ────────────────────────────────────────`);
         console.log(`│  模型: ${requestBody.model}`);
+        console.log(`│  格式: ${outputFormat === 'toon' ? '🎯 TOON' : '📋 JSON'}`);
         console.log(`│  方向: ${sourceLang} → ${targetLang}`);
         console.log(`│  段落数: ${paragraphPreviews.length}`);
         paragraphPreviews.forEach(p => {
@@ -272,7 +400,7 @@ const server = http.createServer((req, res) => {
         console.log(`│  队列长度: ${responseQueue.length + 1}`);
         console.log(`└${'─'.repeat(50)}`);
 
-        responseQueue.push({ res, response, requestId, paragraphPreviews, sourceLang, targetLang });
+        responseQueue.push({ res, response, requestId, paragraphPreviews, sourceLang, targetLang, outputFormat });
 
         // 触发队列处理
         processResponseQueue();

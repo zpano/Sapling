@@ -157,6 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 高级设置
     concurrencyLimit: document.getElementById('concurrencyLimit'),
     maxBatchSize: document.getElementById('maxBatchSize'),
+    outputFormat: document.getElementById('outputFormat'),
     processFullPage: document.getElementById('processFullPage'),
 
     // 站点规则
@@ -407,6 +408,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // 高级设置
       if (elements.concurrencyLimit) elements.concurrencyLimit.value = String(normalizeConcurrencyLimit(syncResult.concurrencyLimit));
       if (elements.maxBatchSize) elements.maxBatchSize.value = String(normalizeMaxBatchSize(syncResult.maxBatchSize));
+      if (elements.outputFormat) elements.outputFormat.value = syncResult.outputFormat ?? 'standard';
       if (elements.processFullPage) elements.processFullPage.checked = syncResult.processFullPage ?? false;
 
       // 缓存容量
@@ -1018,6 +1020,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       cacheMaxSize: normalizedCacheMaxSize,
       concurrencyLimit: normalizedConcurrencyLimit,
       maxBatchSize: normalizedMaxBatchSize,
+      outputFormat: elements.outputFormat?.value ?? 'standard',
       processFullPage: elements.processFullPage?.checked ?? false
     };
   }
@@ -1128,6 +1131,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       input.addEventListener('change', () => debouncedSave(200));
       input.addEventListener('input', () => debouncedSave(200));
     });
+
+    // 下拉选择框 - 改变时保存
+    if (elements.outputFormat) {
+      elements.outputFormat.addEventListener('change', () => debouncedSave(200));
+    }
 
     // 滑块 - 改变时保存
     elements.difficultyLevel.addEventListener('input', () => debouncedSave(200));

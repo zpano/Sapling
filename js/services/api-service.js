@@ -9,6 +9,7 @@ import { buildVocabularySelectionPrompt, buildBatchVocabularySelectionPrompt, bu
 import { detectLanguage } from '../utils/language-detector.js';
 import { isNonLearningWord, normalizeCefrLevel } from '../utils/word-filters.js';
 import { segmentText, reconstructTextWithWords, filterWords } from '../utils/text-processor.js';
+import { decodeContent } from '../utils/toon-codec.js';
 
 /**
  * API 服务类
@@ -98,8 +99,32 @@ class ApiService {
 
       // 检查是否为新的批量格式
       if (Array.isArray(parsed)) {
-        // 检查第一项是否有 paragraphIndex（新批量格式）
+        // 检查第一项是否有 paragraphIndex
         if (parsed.length > 0 && parsed[0].paragraphIndex !== undefined) {
+          // 检查是否为扁平化格式（TOON 解码后的格式）
+          // 特征：有 paragraphIndex，但没有 words 字段，且有其他词汇字段（如 original, translation）
+          if (!parsed[0].words && parsed[0].original !== undefined) {
+            // 扁平化格式，需要重新分组
+            const grouped = {};
+            for (const item of parsed) {
+              const idx = item.paragraphIndex ?? 0;
+              if (!grouped[idx]) {
+                grouped[idx] = [];
+              }
+              // 提取词汇字段（去除 paragraphIndex）
+              const { paragraphIndex, ...wordData } = item;
+              grouped[idx].push(wordData);
+            }
+            // 转换为数组格式
+            return Object.keys(grouped)
+              .sort((a, b) => Number(a) - Number(b))
+              .map(idx => ({
+                paragraphIndex: Number(idx),
+                words: grouped[idx]
+              }));
+          }
+
+          // 标准批量格式（有 words 字段）
           return parsed.map(item => ({
             paragraphIndex: item.paragraphIndex,
             words: Array.isArray(item.words) ? item.words : []
@@ -373,7 +398,8 @@ class ApiService {
             learningLanguage: config.targetLanguage,
             aiTargetCount,
             aiMaxCount,
-            userDifficultyLevel: config.difficultyLevel
+            userDifficultyLevel: config.difficultyLevel,
+            outputFormat: config.outputFormat
           });
 
           let response;
@@ -429,7 +455,10 @@ class ApiService {
           }
 
           const data = await response.json();
-          const content = data.choices?.[0]?.message?.content || '[]';
+          let content = data.choices?.[0]?.message?.content || '[]';
+
+          // TOON 解码（如果启用）
+          content = decodeContent(content, config.outputFormat);
 
           // 解析批量响应
           const batchResults = this.parseBatchApiResponse(content);
@@ -673,7 +702,8 @@ class ApiService {
           sourceLang,
           targetLang,
           nativeLanguage: config.nativeLanguage,
-          learningLanguage: config.targetLanguage
+          learningLanguage: config.targetLanguage,
+          outputFormat: config.outputFormat
         });
 
         // 用户消息只包含要翻译的单词列表（逗号分隔）
@@ -754,7 +784,11 @@ class ApiService {
           }
 
 	          const data = await response.json();
-	          const content = data.choices?.[0]?.message?.content || '[]';
+	          let content = data.choices?.[0]?.message?.content || '[]';
+
+	          // TOON 解码（如果启用）
+	          content = decodeContent(content, config.outputFormat);
+
 	          return this.parseApiResponse(content);
 	        });
 

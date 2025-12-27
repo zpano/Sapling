@@ -52,45 +52,7 @@ Select ${aiTargetCount}-${aiMaxCount} words with high learning value from the pr
 ${getCommonSections(nativeLanguage, learningLanguage, isLearningFromSource)}
 
 ## Example Output (JSON ONLY):
-${isLearningFromSource ? `[
-  {
-    "original": "affiliated",
-    "translation": "隶属的",
-    "phonetic": "/əˈfɪlieɪtɪd/",
-    "difficulty": "B2",
-    "partOfSpeech": "adjective",
-    "shortDefinition": "officially connected or associated with an organization",
-    "example": "The hospital is affiliated with the university medical school."
-  },
-  {
-    "original": "technology",
-    "translation": "技术",
-    "phonetic": "/tekˈnɒlədʒi/",
-    "difficulty": "A2",
-    "partOfSpeech": "noun",
-    "shortDefinition": "the application of scientific knowledge for practical purposes",
-    "example": "Modern technology has transformed the way we communicate."
-  }
-]` : `[
-  {
-    "original": "艺术家",
-    "translation": "artist",
-    "phonetic": "/ˈɑːtɪst/",
-    "difficulty": "B2",
-    "partOfSpeech": "noun",
-    "shortDefinition": "a person who creates art, especially paintings or drawings",
-    "example": "The artist spent years perfecting her technique."
-  },
-  {
-    "original": "技术",
-    "translation": "technology",
-    "phonetic": "/tekˈnɒlədʒi/",
-    "difficulty": "A2",
-    "partOfSpeech": "noun",
-    "shortDefinition": "the application of scientific knowledge for practical purposes",
-    "example": "Technology continues to advance at a rapid pace."
-  }
-]`}`;
+${isLearningFromSource ? `[{"original":"affiliated","translation":"隶属的","phonetic":"/əˈfɪlieɪtɪd/","difficulty":"B2","partOfSpeech":"adjective","shortDefinition":"officially connected or associated with an organization","example":"The hospital is affiliated with the university medical school."},{"original":"technology","translation":"技术","phonetic":"/tekˈnɒlədʒi/","difficulty":"A2","partOfSpeech":"noun","shortDefinition":"the application of scientific knowledge for practical purposes","example":"Modern technology has transformed the way we communicate."}]` : `[{"original":"艺术家","translation":"artist","phonetic":"/ˈɑːtɪst/","difficulty":"B2","partOfSpeech":"noun","shortDefinition":"a person who creates art, especially paintings or drawings","example":"The artist spent years perfecting her technique."},{"original":"技术","translation":"technology","phonetic":"/tekˈnɒlədʒi/","difficulty":"A2","partOfSpeech":"noun","shortDefinition":"the application of scientific knowledge for practical purposes","example":"Technology continues to advance at a rapid pace."}]`}`;
 }
 
 /**
@@ -110,7 +72,8 @@ export function buildBatchVocabularySelectionPrompt({
   learningLanguage,
   aiTargetCount,
   aiMaxCount,
-  userDifficultyLevel = 'B1'
+  userDifficultyLevel = 'B1',
+  outputFormat = 'standard'
 }) {
   // 验证输入
   if (!paragraphs || paragraphs.length === 0) {
@@ -143,80 +106,48 @@ For EACH paragraph provided, select ${aiTargetCount}-${aiMaxCount} words with hi
 
 ${getCommonSections(nativeLanguage, learningLanguage, isLearningFromSource)}
 
+## Input Format:
+You will receive paragraphs in this format:
+
+<index>:
+<paragraph text>
+
+Each paragraph begins with a number (0, 1, 2...) followed by a colon, then the text on the next line. Paragraphs are separated by blank lines.
+
+**CRITICAL**: Return the exact index in the "paragraphIndex" field of your response for each paragraph.
+
 ## Output Format (CRITICAL):
-Return a JSON array where EACH item represents one paragraph:
-- **paragraphIndex**: The paragraph index (matching the [Paragraph X] number in input)
+${outputFormat === 'toon' ? `Return the data in TOON format(2-space indent, arrays show length and fields). 
+
+**TOON Rules**:
+- Use 2 spaces for indentation
+- Header format: [count]{field1,field2,...}:
+- Data rows: comma-separated values (value1,value2,value3,...)
+- Quote strings containing commas, newlines, or special chars with double quotes
+- Escape quotes inside quoted strings with backslash
+- Array starts with header line, count is the data row length.
+- Include paragraphIndex as first field in each row, means the paragraph index of the word in the original text.
+
+Example TOON Output:
+[3]{paragraphIndex,original,translation,phonetic,difficulty,partOfSpeech,shortDefinition,example}:
+  0,affiliated,隶属的,/əˈfɪlieɪtɪd/,B2,adjective,"officially connected or associated with an organization","The hospital is affiliated with the university."
+  0,innovation,创新,/ˌɪnəˈveɪʃn/,B2,noun,"a new method, idea, or product","The company is known for its innovation."
+  1,technology,技术,/tekˈnɒlədʒi/,A2,noun,"the application of scientific knowledge","Technology continues to advance rapidly."` : `Return a JSON array where EACH item represents one paragraph:
+- **paragraphIndex**: The paragraph index (matching the <index>: number in input)
 - **words**: Array of word objects for that paragraph
 
 ${isLearningFromSource ? `## Example Output (JSON ONLY):
-[
-  {
-    "paragraphIndex": 0,
-    "words": [
-      {
-        "original": "affiliated",
-        "translation": "隶属的",
-        "phonetic": "/əˈfɪlieɪtɪd/",
-        "difficulty": "B2",
-        "partOfSpeech": "adjective",
-        "shortDefinition": "officially connected or associated with an organization",
-        "example": "The hospital is affiliated with the university."
-      }
-    ]
-  },
-  {
-    "paragraphIndex": 1,
-    "words": [
-      {
-        "original": "innovation",
-        "translation": "创新",
-        "phonetic": "/ˌɪnəˈveɪʃn/",
-        "difficulty": "B2",
-        "partOfSpeech": "noun",
-        "shortDefinition": "a new method, idea, or product",
-        "example": "The company is known for its innovation."
-      }
-    ]
-  }
-]` : `## Example Output (JSON ONLY):
-[
-  {
-    "paragraphIndex": 0,
-    "words": [
-      {
-        "original": "技术",
-        "translation": "technology",
-        "phonetic": "/tekˈnɒlədʒi/",
-        "difficulty": "A2",
-        "partOfSpeech": "noun",
-        "shortDefinition": "the application of scientific knowledge",
-        "example": "Technology continues to advance rapidly."
-      }
-    ]
-  },
-  {
-    "paragraphIndex": 1,
-    "words": [
-      {
-        "original": "创新",
-        "translation": "innovation",
-        "phonetic": "/ˌɪnəˈveɪʃn/",
-        "difficulty": "B2",
-        "partOfSpeech": "noun",
-        "shortDefinition": "a new method, idea, or product",
-        "example": "Innovation drives economic growth."
-      }
-    ]
-  }
-]`}
+[{"paragraphIndex":0,"words":[{"original":"affiliated","translation":"隶属的","phonetic":"/əˈfɪlieɪtɪd/","difficulty":"B2","partOfSpeech":"adjective","shortDefinition":"officially connected or associated with an organization","example":"The hospital is affiliated with the university."}]},{"paragraphIndex":1,"words":[{"original":"innovation","translation":"创新","phonetic":"/ˌɪnəˈveɪʃn/","difficulty":"B2","partOfSpeech":"noun","shortDefinition":"a new method, idea, or product","example":"The company is known for its innovation."}]}]` : `## Example Output (JSON ONLY):
+[{"paragraphIndex":0,"words":[{"original":"技术","translation":"technology","phonetic":"/tekˈnɒlədʒi/","difficulty":"A2","partOfSpeech":"noun","shortDefinition":"the application of scientific knowledge","example":"Technology continues to advance rapidly."}]},{"paragraphIndex":1,"words":[{"original":"创新","translation":"innovation","phonetic":"/ˌɪnəˈveɪʃn/","difficulty":"B2","partOfSpeech":"noun","shortDefinition":"a new method, idea, or product","example":"Innovation drives economic growth."}]}]`}`}
+
 
 ## Output:
-Return ONLY the JSON array. Include ALL paragraphs even if some have empty words arrays.`;
+${outputFormat === 'toon' ? 'Return ONLY the TOON format data. Include ALL paragraphs (all rows must have correct paragraphIndex).' : 'Return ONLY the JSON array. Include ALL paragraphs even if some have empty words arrays.'}`;
 
   // 构建用户提示词：格式化多个段落
   const userPrompt = paragraphs.map(p =>
-    `[Paragraph ${p.index}] (${p.sourceLang} → ${p.targetLang}):\n${p.text}`
-  ).join('\n\n---\n\n');
+    `${p.index}:\n${p.text}`
+  ).join('\n\n');
 
   return { systemPrompt, userPrompt };
 }
@@ -234,7 +165,8 @@ export function buildSpecificWordsPrompt({
   sourceLang,
   targetLang,
   nativeLanguage,
-  learningLanguage
+  learningLanguage,
+  outputFormat = 'standard'
 }) {
   // 判断学习语言的词汇在哪个字段
   const isLearningFromSource = sourceLang === learningLanguage;
@@ -249,31 +181,27 @@ export function buildSpecificWordsPrompt({
 
 ${getCommonSections(nativeLanguage, learningLanguage, isLearningFromSource)}
 
-## Example Output (JSON ONLY):
-${isLearningFromSource ? `[
-  {
-    "original": "affiliated",
-    "translation": "隶属的",
-    "phonetic": "/əˈfɪlieɪtɪd/",
-    "difficulty": "B2",
-    "partOfSpeech": "adjective",
-    "shortDefinition": "officially connected or associated with an organization",
-    "example": "The hospital is affiliated with the university medical school."
-  }
-]` : `[
-  {
-    "original": "技术",
-    "translation": "technology",
-    "phonetic": "/tekˈnɒlədʒi/",
-    "difficulty": "A2",
-    "partOfSpeech": "noun",
-    "shortDefinition": "the application of scientific knowledge for practical purposes",
-    "example": "Technology continues to advance at a rapid pace."
-  }
-]`}
+${outputFormat === 'toon' ? `Return the data in TOON format(2-space indent, arrays show length and fields).
+
+**TOON Rules**:
+- Use 2 spaces for indentation
+- Header format: [count]{field1,field2,...}:
+- Data rows: comma-separated values (value1,value2,value3,...)
+- Quote strings containing commas, newlines, or special chars with double quotes
+- Escape quotes inside quoted strings with backslash
+- Array starts with header line, count is the data row length.
+
+## Example TOON Output:
+[2]{original,translation,phonetic,difficulty,partOfSpeech,shortDefinition,example}:
+  affiliated,隶属的,/əˈfɪlieɪtɪd/,B2,adjective,"officially connected or associated with an organization","The hospital is affiliated with the university."
+  innovation,创新,/ˌɪnəˈveɪʃn/,B2,noun,"a new method, idea, or product","The company is known for its innovation."
 
 ## Output:
-Return only the JSON array and nothing else.`;
+Return ONLY the TOON format data.` : `## Example Output (JSON ONLY):
+${isLearningFromSource ? `[{"original":"affiliated","translation":"隶属的","phonetic":"/əˈfɪlieɪtɪd/","difficulty":"B2","partOfSpeech":"adjective","shortDefinition":"officially connected or associated with an organization","example":"The hospital is affiliated with the university medical school."}]` : `[{"original":"技术","translation":"technology","phonetic":"/tekˈnɒlədʒi/","difficulty":"A2","partOfSpeech":"noun","shortDefinition":"the application of scientific knowledge for practical purposes","example":"Technology continues to advance at a rapid pace."}]`}
+
+## Output:
+Return only the JSON array and nothing else.`}`;
 }
 
 /**
