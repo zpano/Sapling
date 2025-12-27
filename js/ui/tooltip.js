@@ -314,7 +314,7 @@ export class TooltipManager {
         if (this.tooltip) this.tooltip.style.display = 'none';
         this.currentTooltipElement = null;
         this.tooltipHideTimeout = null;
-      }, 800);
+      }, 150);
     }
   }
 
