@@ -54,13 +54,8 @@ export async function playAudioUrls(urls) {
 }
 
 export async function playYoudaoDictVoice(word, type = 2) {
-  const primaryType = normalizeYoudaoType(type);
-  const secondaryType = primaryType === 1 ? 2 : 1;
-
-  const primaryUrl = buildYoudaoDictVoiceUrl(word, primaryType);
-  const secondaryUrl = buildYoudaoDictVoiceUrl(word, secondaryType);
-
-  await playAudioUrls([primaryUrl, secondaryUrl]);
+  const url = buildYoudaoDictVoiceUrl(word, type);
+  await playAudioUrls([url]);
 }
 
 export async function playGoogleTranslateTts(text, lang) {
