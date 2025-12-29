@@ -4,7 +4,7 @@
  */
 
 import { storage } from '../core/storage/StorageService.js';
-import { audioIframePlayer } from '../services/audio-iframe-player.js';
+import { playAudioUrl } from '../services/audio-service.js';
 
 // 词典缓存
 const dictionaryCache = new Map();
@@ -393,13 +393,13 @@ async function getDictionaryEntryInternal(word, langCode, depth, visited) {
 export async function playDictionaryAudio(word, langCode = 'en') {
   try {
     const entry = await getDictionaryEntry(word, langCode);
-    const urls = entry?.audioUrls?.length ? entry.audioUrls : entry?.audioUrl ? [entry.audioUrl] : [];
-    if (!urls.length) {
+    const url = entry?.audioUrl || (entry?.audioUrls?.length ? entry.audioUrls[0] : '');
+    if (!url) {
       throw new Error('No audio');
     }
 
-    // 使用 iframe 播放器替代 offscreen document
-    await audioIframePlayer.play(urls);
+    // 只播放第一个 URL，不再 fallback
+    await playAudioUrl(url);
   } catch (error) {
     console.warn('[Sapling] Dictionary audio failed:', error);
     throw error;

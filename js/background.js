@@ -180,8 +180,44 @@ chrome.commands.onCommand.addListener((command, tab) => {
   }
 });
 
+// ArrayBuffer 转 Base64
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 // 消息处理
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // 代理 fetch 音频数据（绕过页面 CSP 限制）
+  if (message.action === 'fetchAudioData') {
+    (async () => {
+      try {
+        const { url } = message;
+        if (!url) {
+          sendResponse({ success: false, message: 'No URL provided' });
+          return;
+        }
+
+        const response = await fetch(url);
+        if (!response.ok) {
+          sendResponse({ success: false, message: `HTTP ${response.status}` });
+          return;
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const base64 = arrayBufferToBase64(arrayBuffer);
+        const contentType = response.headers.get('content-type') || 'audio/mpeg';
+        sendResponse({ success: true, data: base64, contentType });
+      } catch (error) {
+        sendResponse({ success: false, message: error?.message || String(error) });
+      }
+    })();
+    return true;
+  }
   if (message?.action === 'togglePageProcessing') {
     (async () => {
       const tabId = message.tabId;
