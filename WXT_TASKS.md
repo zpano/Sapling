@@ -26,7 +26,7 @@
 - [ ] 迁移 `permissions`: storage, activeTab, scripting, contextMenus
 - [ ] 迁移 `host_permissions`: `<all_urls>`
 - [ ] 迁移 `commands` 快捷键配置
-- [ ] 迁移 `web_accessible_resources` (audio-player.html 等)
+- [ ] 迁移 `web_accessible_resources` (如有需要)
 - [ ] 配置 `default_locale: 'zh_CN'`
 - [ ] 验证 MV3 兼容性
 
@@ -91,8 +91,7 @@
 - [ ] 迁移 `js/services/cache-service.js` (LRU 缓存)
 - [ ] 迁移 `js/services/content-segmenter.js` (DOM 遍历)
 - [ ] 迁移 `js/services/text-replacer.js` (文本替换)
-- [ ] 迁移 `js/services/audio-iframe-player.js` (iframe 音频播放)
-- [ ] 迁移 `js/services/audio-player.html/js` (音频播放器页面)
+- [ ] 迁移 `js/services/audio-service.js` (Web Audio API 播放，绕过 CSP)
 - [ ] 更新所有 import 路径
 
 ### 3.2 Core 目录迁移 (~2h)
@@ -124,9 +123,10 @@
 ## 阶段 4: 跨浏览器适配 [P1] (~4h)
 
 ### 4.1 已完成项 ✅
-- [x] Offscreen Document 替代方案 (隐藏 iframe 方案)
-- [x] TTS API 替代方案 (Google Translate TTS)
+- [x] 音频播放 CSP 兼容方案 (Background Proxy + Web Audio API)
+- [x] TTS API 替代方案 (Google Translate TTS / Wiktionary / 有道词典)
 - [x] 移除 `tts` 和 `offscreen` 权限
+- [x] 删除 iframe 音频播放方案 (audio-iframe-player.js, audio-player.html/js)
 
 ### 4.2 Firefox 兼容性测试 (~4h)
 - [ ] 使用 `pnpm dev:firefox` 启动 Firefox 开发模式
@@ -134,7 +134,7 @@
 - [ ] 测试 content script 注入
 - [ ] 测试 DOM 翻译替换功能
 - [ ] 测试 tooltip 显示
-- [ ] 测试音频播放 (iframe 方案)
+- [ ] 测试音频播放 (Web Audio API 方案)
 - [ ] 测试 popup 功能
 - [ ] 测试 options 页面
 - [ ] 测试存储同步功能
