@@ -94,71 +94,124 @@ class ApiService {
    * @returns {Array<{paragraphIndex: number, words: Array}>}
    */
   parseBatchApiResponse(content) {
+    let parsed;
     try {
-      let parsed = JSON.parse(content);
+      parsed = JSON.parse(content);
+    } catch (e) {
+      const extracted = this._extractFirstJsonArray(content);
+      if (!extracted || extracted === content) {
+        return [];
+      }
+      try {
+        parsed = JSON.parse(extracted);
+      } catch (e2) {
+        console.error('[Sapling] Failed to parse batch API response:', e2);
+        return [];
+      }
+    }
 
-      // 检查是否为新的批量格式
-      if (Array.isArray(parsed)) {
-        // 检查第一项是否有 paragraphIndex
-        if (parsed.length > 0 && parsed[0].paragraphIndex !== undefined) {
-          // 检查是否为扁平化格式（TOON 解码后的格式）
-          // 特征：有 paragraphIndex，但没有 words 字段，且有其他词汇字段（如 original, translation）
-          if (!parsed[0].words && parsed[0].original !== undefined) {
-            // 扁平化格式，需要重新分组
-            const grouped = {};
-            for (const item of parsed) {
-              const idx = item.paragraphIndex ?? 0;
-              if (!grouped[idx]) {
-                grouped[idx] = [];
-              }
-              // 提取词汇字段（去除 paragraphIndex）
-              const { paragraphIndex, ...wordData } = item;
-              grouped[idx].push(wordData);
+    // 检查是否为新的批量格式
+    if (Array.isArray(parsed)) {
+      // 检查第一项是否有 paragraphIndex
+      if (parsed.length > 0 && parsed[0].paragraphIndex !== undefined) {
+        // 检查是否为扁平化格式（TOON 解码后的格式）
+        // 特征：有 paragraphIndex，但没有 words 字段，且有其他词汇字段（如 original, translation）
+        if (!parsed[0].words && parsed[0].original !== undefined) {
+          // 扁平化格式，需要重新分组
+          const grouped = {};
+          for (const item of parsed) {
+            const idx = item.paragraphIndex ?? 0;
+            if (!grouped[idx]) {
+              grouped[idx] = [];
             }
-            // 转换为数组格式
-            return Object.keys(grouped)
-              .sort((a, b) => Number(a) - Number(b))
-              .map(idx => ({
-                paragraphIndex: Number(idx),
-                words: grouped[idx]
-              }));
+            // 提取词汇字段（去除 paragraphIndex）
+            const { paragraphIndex, ...wordData } = item;
+            grouped[idx].push(wordData);
           }
-
-          // 标准批量格式（有 words 字段）
-          return parsed.map(item => ({
-            paragraphIndex: item.paragraphIndex,
-            words: Array.isArray(item.words) ? item.words : []
-          }));
+          // 转换为数组格式
+          return Object.keys(grouped)
+            .sort((a, b) => Number(a) - Number(b))
+            .map(idx => ({
+              paragraphIndex: Number(idx),
+              words: grouped[idx]
+            }));
         }
 
-        // 兼容旧格式：单个词汇数组，包装为段落 0
-        return [{ paragraphIndex: 0, words: parsed }];
-      }
-
-      // 处理包装格式
-      if (parsed.results && Array.isArray(parsed.results)) {
-        return this.parseBatchApiResponse(JSON.stringify(parsed.results));
-      }
-      if (parsed.paragraphs && Array.isArray(parsed.paragraphs)) {
-        return parsed.paragraphs.map(item => ({
-          paragraphIndex: item.paragraphIndex ?? item.index ?? 0,
+        // 标准批量格式（有 words 字段）
+        return parsed.map(item => ({
+          paragraphIndex: item.paragraphIndex,
           words: Array.isArray(item.words) ? item.words : []
         }));
       }
 
-      return [];
-    } catch (e) {
-      // 尝试从内容中提取 JSON 数组
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        try {
-          return this.parseBatchApiResponse(jsonMatch[0]);
-        } catch (e2) {
-          console.error('[Sapling] Failed to parse batch API response:', e2);
+      // 兼容旧格式：单个词汇数组，包装为段落 0
+      return [{ paragraphIndex: 0, words: parsed }];
+    }
+
+    // 处理包装格式
+    if (parsed.results && Array.isArray(parsed.results)) {
+      return this.parseBatchApiResponse(JSON.stringify(parsed.results));
+    }
+    if (parsed.paragraphs && Array.isArray(parsed.paragraphs)) {
+      return parsed.paragraphs.map(item => ({
+        paragraphIndex: item.paragraphIndex ?? item.index ?? 0,
+        words: Array.isArray(item.words) ? item.words : []
+      }));
+    }
+
+    return [];
+  }
+
+  _extractFirstJsonArray(content) {
+    if (typeof content !== 'string') {
+      return null;
+    }
+
+    let startIndex = -1;
+    let depth = 0;
+    let inString = false;
+    let isEscaped = false;
+
+    for (let i = 0; i < content.length; i++) {
+      const char = content[i];
+
+      if (inString) {
+        if (isEscaped) {
+          isEscaped = false;
+          continue;
+        }
+        if (char === '\\') {
+          isEscaped = true;
+          continue;
+        }
+        if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (char === '[') {
+        if (depth === 0) {
+          startIndex = i;
+        }
+        depth++;
+        continue;
+      }
+
+      if (char === ']' && depth > 0) {
+        depth--;
+        if (depth === 0 && startIndex !== -1) {
+          return content.slice(startIndex, i + 1);
         }
       }
-      return [];
     }
+
+    return null;
   }
 
   /**

@@ -98,16 +98,14 @@ class ApiService {
     try {
       parsed = JSON.parse(content);
     } catch (e) {
-      // 尝试从内容中提取 JSON 数组
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
-      if (jsonMatch && jsonMatch[0] !== content) {
-        try {
-          parsed = JSON.parse(jsonMatch[0]);
-        } catch (e2) {
-          console.error('[Sapling] Failed to parse extracted batch API response:', e2);
-          return [];
-        }
-      } else {
+      const extracted = this._extractFirstJsonArray(content);
+      if (!extracted || extracted === content) {
+        return [];
+      }
+      try {
+        parsed = JSON.parse(extracted);
+      } catch (e2) {
+        console.error('[Sapling] Failed to parse extracted batch API response:', e2);
         return [];
       }
     }
@@ -187,6 +185,58 @@ class ApiService {
     }
 
     return [];
+  }
+
+  _extractFirstJsonArray(content) {
+    if (typeof content !== 'string') {
+      return null;
+    }
+
+    let startIndex = -1;
+    let depth = 0;
+    let inString = false;
+    let isEscaped = false;
+
+    for (let i = 0; i < content.length; i++) {
+      const char = content[i];
+
+      if (inString) {
+        if (isEscaped) {
+          isEscaped = false;
+          continue;
+        }
+        if (char === '\\') {
+          isEscaped = true;
+          continue;
+        }
+        if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (char === '[') {
+        if (depth === 0) {
+          startIndex = i;
+        }
+        depth++;
+        continue;
+      }
+
+      if (char === ']' && depth > 0) {
+        depth--;
+        if (depth === 0 && startIndex !== -1) {
+          return content.slice(startIndex, i + 1);
+        }
+      }
+    }
+
+    return null;
   }
 
   /**
