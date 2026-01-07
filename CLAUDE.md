@@ -73,10 +73,9 @@ UI Pages
     ├── popup.js/html/css   - Extension popup (stats, quick actions)
     └── options.js/html/css - Settings page (6-section navigation)
 
-Styles (css/)
-    ├── content.css         - Content script styles (tooltips, highlights)
-    ├── options.css         - Options page styles
-    └── popup.css           - Popup styles
+Styles
+    ├── components/ui/content.css - Content script styles (tooltips, highlights)
+    └── public/css/*             - Extension page styles
 ```
 
 ## Key Technical Details
@@ -144,7 +143,7 @@ The storage system uses a 4-layer architecture for flexibility and future extens
 |------|-------|
 | Modify translation logic | `js/services/api-service.js`, `js/prompts/ai-prompts.js` |
 | Change DOM processing | `js/services/content-segmenter.js`, `js/services/text-replacer.js` |
-| Update tooltip behavior | `js/ui/tooltip.js`, `css/content.css` |
+| Update tooltip behavior | `js/ui/tooltip.js`, `components/ui/content.css` |
 | Modify word filtering | `js/utils/word-filters.js`, `js/config/constants.js` |
 | Change storage behavior | `js/core/storage/StorageService.js`, `js/core/storage/ChromeStorageAdapter.js` |
 | Add new storage backend | Create new adapter implementing `js/core/storage/IStorageAdapter.js` |

@@ -1,3 +1,4 @@
+import '../components/ui/content.css';
 import { CEFR_LEVELS, INTENSITY_CONFIG, SKIP_TAGS, SKIP_CLASSES } from '../components/config/constants.js';
 import { CACHE_CONFIG, DEFAULT_THEME, normalizeCacheMaxSize, normalizeConcurrencyLimit, normalizeMaxBatchSize } from '../components/core/config.js';
 import { storage } from '../components/core/storage/StorageService.js';

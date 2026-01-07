@@ -2,10 +2,8 @@
  * Sapling Options 脚本 - 自动保存版本
  */
 
-// 导入 CSS（WXT 会在构建时处理）
-import '../../public/css/theme.css';
-import '../../public/css/ui-controls.css';
-import '../../public/css/options.css';
+// 注意：`public/` 下的 CSS 不能用 ESM `import` 引入（Vite 会报错）。
+// 这里改为在对应 HTML 里用 `<link>` 引用（见 `entrypoints/options/index.html`）。
 
 import { normalizeHexColor, applyThemeVariables } from '../../components/utils/color-utils.js';
 import { storage } from '../../components/core/storage/StorageService.js';

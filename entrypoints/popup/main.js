@@ -2,9 +2,8 @@
  * Sapling Popup 脚本
  */
 
-// 导入 CSS（WXT 会在构建时处理）
-import '../../public/css/theme.css';
-import '../../public/css/popup.css';
+// 注意：`public/` 下的 CSS 不能用 ESM `import` 引入（Vite 会报错）。
+// 这里改为在对应 HTML 里用 `<link>` 引用（见 `entrypoints/popup/index.html`）。
 
 import { applyThemeVariables } from '../../components/utils/color-utils.js';
 import { storage } from '../../components/core/storage/StorageService.js';
