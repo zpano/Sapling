@@ -11,6 +11,16 @@
  * @param {string} content - 原始响应内容
  * @returns {string} 提取并修正后的 TOON 内容
  */
+import { decode } from '@toon-format/toon';
+
+/**
+ * 从 AI 响应中提取纯净的 TOON 内容，并同步修正行数声明
+ * - 去除 AI 可能输出的前置废话（如 "Here is the TOON format:"）
+ * - 统计实际数据行数并修正 header 中的行数声明
+ *
+ * @param {string} content - 原始响应内容
+ * @returns {string} 提取并修正后的 TOON 内容
+ */
 function extractAndFixToonContent(content) {
   const lines = content.split('\n');
 
@@ -51,12 +61,9 @@ function extractAndFixToonContent(content) {
  * @returns {boolean} 是否为 TOON 格式
  */
 export function isToonFormat(content) {
-  if (typeof window.TOON === 'undefined' || typeof window.TOON.isToonFormat !== 'function') {
-    return false;
-  }
-
-  const extracted = extractAndFixToonContent(content);
-  return window.TOON.isToonFormat(extracted);
+  if (!content || typeof content !== 'string') return false;
+  const lines = content.split('\n');
+  return lines.some(line => /^\[\d+\]\{[^}]+\}:/.test(line.trim()));
 }
 
 /**
@@ -66,15 +73,11 @@ export function isToonFormat(content) {
  * @throws {Error} 解码失败时抛出异常
  */
 export function decodeToon(toonContent) {
-  if (typeof window.TOON === 'undefined' || typeof window.TOON.decode !== 'function') {
-    throw new Error('TOON 库未加载');
-  }
-
   // 预处理：提取并修正 TOON 内容
   const cleanContent = extractAndFixToonContent(toonContent);
 
   try {
-    const decoded = window.TOON.decode(cleanContent);
+    const decoded = decode(cleanContent);
     return JSON.stringify(decoded);
   } catch (error) {
     throw new Error(`TOON 解码失败: ${error.message}`);
@@ -99,18 +102,12 @@ export function decodeContent(content, outputFormat) {
     return content;
   }
 
-  // 检查 TOON 库是否可用
-  if (typeof window.TOON === 'undefined') {
-    return content;
-  }
-
-  // 预处理一次：提取并修正 TOON 内容
-  const cleaned = extractAndFixToonContent(content);
-
   // 检测并解码
-  if (window.TOON.isToonFormat?.(cleaned)) {
+  if (isToonFormat(content)) {
     try {
-      const decoded = window.TOON.decode(cleaned);
+      // 预处理一次：提取并修正 TOON 内容
+      const cleaned = extractAndFixToonContent(content);
+      const decoded = decode(cleaned);
       return JSON.stringify(decoded);
     } catch (error) {
       console.error('[TOON] 解码失败:', error.message);
