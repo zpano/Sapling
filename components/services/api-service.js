@@ -502,17 +502,8 @@ class ApiService {
           const data = await response.json();
           let content = data.choices?.[0]?.message?.content || '[]';
 
-          // [Sapling Debug] 打印原始响应内容
-          console.debug('[Sapling Debug] Raw API Response Content:', content);
-
           // TOON 解码（如果启用）
-          if (config.outputFormat === 'toon') {
-            const decoded = decodeContent(content, 'toon');
-            console.debug('[Sapling Debug] TOON Decoded Content:', decoded);
-            content = decoded;
-          } else {
-            content = decodeContent(content, config.outputFormat);
-          }
+          content = decodeContent(content, config.outputFormat);
 
           // 解析批量响应
           const batchResults = this.parseBatchApiResponse(content);

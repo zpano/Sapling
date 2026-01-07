@@ -12,7 +12,8 @@ import { contentSegmenter } from '../components/services/content-segmenter.js';
 import { textReplacer } from '../components/services/text-replacer.js';
 
 // ============ 状态管理 ============
-console.log('[Sapling] Content Script File Loaded (Top Level Execution)');
+
+
 
 let config = null;
 let isProcessing = false;
