@@ -2,6 +2,11 @@
  * Sapling Options 脚本 - 自动保存版本
  */
 
+// 导入 CSS（WXT 会在构建时处理）
+import '../../public/css/theme.css';
+import '../../public/css/ui-controls.css';
+import '../../public/css/options.css';
+
 import { normalizeHexColor, applyThemeVariables } from '../../components/utils/color-utils.js';
 import { storage } from '../../components/core/storage/StorageService.js';
 import { getModalController } from '../../components/ui/modal.js';

@@ -2,6 +2,10 @@
  * Sapling Popup 脚本
  */
 
+// 导入 CSS（WXT 会在构建时处理）
+import '../../public/css/theme.css';
+import '../../public/css/popup.css';
+
 import { applyThemeVariables } from '../../components/utils/color-utils.js';
 import { storage } from '../../components/core/storage/StorageService.js';
 
