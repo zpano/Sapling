@@ -5,3 +5,7 @@ dist/
 
 # OS
 .DS_Store
+
+# WXT
+.output/
+.wxt/

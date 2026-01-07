@@ -1,0 +1,214 @@
+{
+  "extensionName": {
+    "message": "Sapling - Immersive Language Learning",
+    "description": "Extension name"
+  },
+  "extensionDescription": {
+    "message": "Learn languages naturally while browsing, intelligent vocabulary replacement for immersive bilingual learning",
+    "description": "Extension description"
+  },
+  "commandToggleTranslation": {
+    "message": "Toggle process/restore current page",
+    "description": "Keyboard shortcut description"
+  },
+  "popupTitle": {
+    "message": "Sapling",
+    "description": "Popup title"
+  },
+  "statsTitle": {
+    "message": "Learning Statistics",
+    "description": "Statistics title"
+  },
+  "totalWords": {
+    "message": "Total Encountered",
+    "description": "Total words encountered"
+  },
+  "todayWords": {
+    "message": "Today",
+    "description": "Today's words"
+  },
+  "learnedWords": {
+    "message": "Learned",
+    "description": "Learned words count"
+  },
+  "memorizeWords": {
+    "message": "To Memorize",
+    "description": "Words to memorize"
+  },
+  "cachedWords": {
+    "message": "Cached",
+    "description": "Cached words count"
+  },
+  "cacheHitRate": {
+    "message": "Hit Rate",
+    "description": "Cache hit rate"
+  },
+  "processPage": {
+    "message": "Process Current Page",
+    "description": "Process page button"
+  },
+  "openSettings": {
+    "message": "Settings",
+    "description": "Open settings page"
+  },
+  "enabled": {
+    "message": "Enabled",
+    "description": "Enabled status"
+  },
+  "disabled": {
+    "message": "Disabled",
+    "description": "Disabled status"
+  },
+  "settingsTitle": {
+    "message": "Sapling Settings",
+    "description": "Settings page title"
+  },
+  "apiSettings": {
+    "message": "API Configuration",
+    "description": "API settings title"
+  },
+  "apiEndpoint": {
+    "message": "API Endpoint",
+    "description": "API endpoint input"
+  },
+  "apiKey": {
+    "message": "API Key",
+    "description": "API key input"
+  },
+  "modelName": {
+    "message": "Model Name",
+    "description": "Model name input"
+  },
+  "testConnection": {
+    "message": "Test Connection",
+    "description": "Test API connection button"
+  },
+  "connectionSuccess": {
+    "message": "Connection successful!",
+    "description": "Connection success message"
+  },
+  "connectionFailed": {
+    "message": "Connection failed",
+    "description": "Connection failed message"
+  },
+  "learningPreferences": {
+    "message": "Learning Preferences",
+    "description": "Learning preferences title"
+  },
+  "nativeLanguage": {
+    "message": "Native Language",
+    "description": "Native language selection"
+  },
+  "targetLanguage": {
+    "message": "Target Language",
+    "description": "Target language selection"
+  },
+  "difficultyLevel": {
+    "message": "Difficulty Level",
+    "description": "Difficulty level selection"
+  },
+  "replacementIntensity": {
+    "message": "Replacement Intensity",
+    "description": "Replacement intensity selection"
+  },
+  "intensityLow": {
+    "message": "Low",
+    "description": "Low intensity"
+  },
+  "intensityMedium": {
+    "message": "Medium",
+    "description": "Medium intensity"
+  },
+  "intensityHigh": {
+    "message": "High",
+    "description": "High intensity"
+  },
+  "behaviorSettings": {
+    "message": "Behavior Settings",
+    "description": "Behavior settings title"
+  },
+  "autoProcess": {
+    "message": "Auto-process new pages",
+    "description": "Auto process toggle"
+  },
+  "showPhonetic": {
+    "message": "Show phonetics",
+    "description": "Phonetic display toggle"
+  },
+  "siteRules": {
+    "message": "Site Rules",
+    "description": "Site rules title"
+  },
+  "blacklist": {
+    "message": "Blacklist (never process)",
+    "description": "Blacklist"
+  },
+  "whitelist": {
+    "message": "Whitelist (always process)",
+    "description": "Whitelist"
+  },
+  "saveSettings": {
+    "message": "Save Settings",
+    "description": "Save button"
+  },
+  "settingsSaved": {
+    "message": "Settings saved",
+    "description": "Save success message"
+  },
+  "clearCache": {
+    "message": "Clear Cache",
+    "description": "Clear cache button"
+  },
+  "cacheCleared": {
+    "message": "Cache cleared",
+    "description": "Clear success message"
+  },
+  "learnedList": {
+    "message": "Learned Words",
+    "description": "Learned words list"
+  },
+  "memorizeList": {
+    "message": "Words to Memorize",
+    "description": "Words to memorize list"
+  },
+  "markAsLearned": {
+    "message": "Mark as learned",
+    "description": "Mark as learned"
+  },
+  "addToMemorize": {
+    "message": "Add to memorize list",
+    "description": "Add to memorize"
+  },
+  "clickToSpeak": {
+    "message": "Click to pronounce",
+    "description": "Pronunciation tip"
+  },
+  "rightClickToLearn": {
+    "message": "Right-click to mark learned",
+    "description": "Mark learned tip"
+  },
+  "presets": {
+    "message": "Preset Services",
+    "description": "Preset service selection"
+  },
+  "apiKeyNotConfigured": {
+    "message": "API Key is not configured. Please configure it in the settings page.",
+    "description": "API Key not configured error message"
+  },
+  "apiEndpointNotConfigured": {
+    "message": "API Endpoint is not configured. Please configure it in the settings page.",
+    "description": "API Endpoint not configured error message"
+  },
+  "apiRequestFailed": {
+    "message": "API request failed",
+    "description": "API request failed error message"
+  },
+  "vocabTestTitle": {
+    "message": "Vocabulary Test",
+    "description": "Vocabulary test page title"
+  },
+  "retestVocab": {
+    "message": "Retest Vocabulary",
+    "description": "Retest vocabulary button"
+  }
+}
