@@ -430,6 +430,17 @@ class ApiService {
             outputFormat: config.outputFormat
           });
 
+          // [Sapling Debug] 打印请求信息
+          console.debug('[Sapling Debug] API Request:', {
+            endpoint: config.apiEndpoint,
+            model: config.modelName,
+            outputFormat: config.outputFormat,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ]
+          });
+
           let response;
           try {
             response = await fetch(config.apiEndpoint, {
@@ -461,6 +472,12 @@ class ApiService {
             let errorMessage;
             let errorCode;
 
+            console.error('[Sapling Debug] API Request Failed:', {
+              status: response.status,
+              statusText: response.statusText,
+              errorData
+            });
+
             if (response.status === 401) {
               errorMessage = 'API Key 无效或已过期';
               errorCode = 'INVALID_API_KEY';
@@ -485,8 +502,17 @@ class ApiService {
           const data = await response.json();
           let content = data.choices?.[0]?.message?.content || '[]';
 
+          // [Sapling Debug] 打印原始响应内容
+          console.debug('[Sapling Debug] Raw API Response Content:', content);
+
           // TOON 解码（如果启用）
-          content = decodeContent(content, config.outputFormat);
+          if (config.outputFormat === 'toon') {
+            const decoded = decodeContent(content, 'toon');
+            console.debug('[Sapling Debug] TOON Decoded Content:', decoded);
+            content = decoded;
+          } else {
+            content = decodeContent(content, config.outputFormat);
+          }
 
           // 解析批量响应
           const batchResults = this.parseBatchApiResponse(content);
