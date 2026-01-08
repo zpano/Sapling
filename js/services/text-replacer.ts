@@ -3,9 +3,9 @@
  * 使用 Range API 精确替换文本节点
  */
 
-import { SKIP_TAGS, SKIP_CLASSES } from '../config/constants.js';
-import { isInAllowedContentEditableRegion } from '../utils/dom-utils.js';
-import { normalizePhonetic } from '../utils/phonetic-utils.js';
+import { SKIP_TAGS, SKIP_CLASSES } from '../config/constants';
+import { isInAllowedContentEditableRegion } from '../utils/dom-utils';
+import { normalizePhonetic } from '../utils/phonetic-utils';
 
 /**
  * 文本替换器类

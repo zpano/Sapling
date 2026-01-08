@@ -2,7 +2,7 @@
  * Sapling 发音音频源
  */
 
-import { playAudioUrl } from '../services/audio-service.js';
+import { playAudioUrl } from '../services/audio-service';
 
 function normalizeYoudaoType(type) {
   return Number(type) === 1 ? 1 : 2;

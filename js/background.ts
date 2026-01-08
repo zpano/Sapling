@@ -3,8 +3,8 @@
  * 处理扩展级别的事件和消息
  */
 
-import { CACHE_CONFIG, DEFAULT_THEME, normalizeCacheMaxSize } from './core/config.js';
-import { storage } from './core/storage/StorageService.js';
+import { CACHE_CONFIG, DEFAULT_THEME, normalizeCacheMaxSize } from './core/config';
+import { storage } from './core/storage/StorageService';
 
 const MENU_ID_ADD_MEMORIZE = 'Sapling-add-memorize';
 const MENU_ID_TOGGLE_PAGE = 'Sapling-process-page';

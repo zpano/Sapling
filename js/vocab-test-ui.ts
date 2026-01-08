@@ -2,11 +2,11 @@
  * Sapling 词汇量测试 UI 逻辑
  */
 
-import { VocabTest, CEFR_DESCRIPTIONS } from './services/vocab-test.js';
-import { storage } from './core/storage/StorageService.js';
-import { applyThemeVariables } from './utils/color-utils.js';
-import { DEFAULT_THEME } from './core/config.js';
-import { getModalController } from './ui/modal.js';
+import { VocabTest, CEFR_DESCRIPTIONS } from './services/vocab-test';
+import { storage } from './core/storage/StorageService';
+import { applyThemeVariables } from './utils/color-utils';
+import { DEFAULT_THEME } from './core/config';
+import { getModalController } from './ui/modal';
 
 // DOM 元素
 const welcomeScreen = document.getElementById('welcomeScreen');

@@ -3,12 +3,12 @@
  * 提取自 content.js
  */
 
-import { getDictionaryEntry, playDictionaryAudio } from './wiktionary.js';
-import { playGoogleTranslateTts, playYoudaoDictVoice } from './pronunciation.js';
-import { showToast } from './toast.js';
-import { detectLanguage } from '../utils/language-detector.js';
-import { isSingleEnglishWord } from '../utils/word-filters.js';
-import { normalizePhonetic } from '../utils/phonetic-utils.js';
+import { getDictionaryEntry, playDictionaryAudio } from './wiktionary';
+import { playGoogleTranslateTts, playYoudaoDictVoice } from './pronunciation';
+import { showToast } from './toast';
+import { detectLanguage } from '../utils/language-detector';
+import { isSingleEnglishWord } from '../utils/word-filters';
+import { normalizePhonetic } from '../utils/phonetic-utils';
 
 /**
  * Tooltip 管理类

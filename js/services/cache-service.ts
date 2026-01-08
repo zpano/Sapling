@@ -3,8 +3,8 @@
  * 实现热词缓存系统，支持 LRU 淘汰策略
  */
 
-import { CACHE_CONFIG, normalizeCacheMaxSize } from '../core/config.js';
-import { storage } from '../core/storage/StorageService.js';
+import { CACHE_CONFIG, normalizeCacheMaxSize } from '../core/config';
+import { storage } from '../core/storage/StorageService';
 
 /**
  * 词汇缓存服务类

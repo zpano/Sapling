@@ -2,8 +2,8 @@
  * Sapling Popup 脚本
  */
 
-import { applyThemeVariables } from './utils/color-utils.js';
-import { storage } from './core/storage/StorageService.js';
+import { applyThemeVariables } from './utils/color-utils';
+import { storage } from './core/storage/StorageService';
 
 document.addEventListener('DOMContentLoaded', async () => {
   const DEFAULT_THEME = {

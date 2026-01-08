@@ -3,13 +3,13 @@
  * 处理与 LLM API 的通信，统一管理翻译逻辑
  */
 
-import { INTENSITY_CONFIG, isDifficultyCompatible, CACHE_CONFIG, normalizeCacheMaxSize, normalizeConcurrencyLimit, normalizeMaxTokens } from '../core/config.js';
-import { cacheService } from './cache-service.js';
-import { buildVocabularySelectionPrompt, buildBatchVocabularySelectionPrompt, buildSpecificWordsPrompt } from '../prompts/ai-prompts.js';
-import { detectLanguage } from '../utils/language-detector.js';
-import { isNonLearningWord, normalizeCefrLevel } from '../utils/word-filters.js';
-import { segmentText, reconstructTextWithWords, filterWords } from '../utils/text-processor.js';
-import { decodeContent } from '../utils/toon-codec.js';
+import { INTENSITY_CONFIG, isDifficultyCompatible, CACHE_CONFIG, normalizeCacheMaxSize, normalizeConcurrencyLimit, normalizeMaxTokens } from '../core/config';
+import { cacheService } from './cache-service';
+import { buildVocabularySelectionPrompt, buildBatchVocabularySelectionPrompt, buildSpecificWordsPrompt } from '../prompts/ai-prompts';
+import { detectLanguage } from '../utils/language-detector';
+import { isNonLearningWord, normalizeCefrLevel } from '../utils/word-filters';
+import { segmentText, reconstructTextWithWords, filterWords } from '../utils/text-processor';
+import { decodeContent } from '../utils/toon-codec';
 
 /**
  * API 服务类

@@ -2,10 +2,10 @@
  * Sapling Options 脚本 - 自动保存版本
  */
 
-import { normalizeHexColor, applyThemeVariables } from './utils/color-utils.js';
-import { storage } from './core/storage/StorageService.js';
-import { getModalController } from './ui/modal.js';
-import { initCustomSelects } from './ui/custom-select.js';
+import { normalizeHexColor, applyThemeVariables } from './utils/color-utils';
+import { storage } from './core/storage/StorageService';
+import { getModalController } from './ui/modal';
+import { initCustomSelects } from './ui/custom-select';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // API 预设

@@ -3,9 +3,9 @@
  * 智能分段页面内容，平衡处理批次大小和上下文相关性
  */
 
-import { SKIP_TAGS, SKIP_CLASSES } from '../config/constants.js';
-import { isCodeText } from '../utils/word-filters.js';
-import { isInAllowedContentEditableRegion } from '../utils/dom-utils.js';
+import { SKIP_TAGS, SKIP_CLASSES } from '../config/constants';
+import { isCodeText } from '../utils/word-filters';
+import { isInAllowedContentEditableRegion } from '../utils/dom-utils';
 
 // 典型 UI/导航容器选择器，避免替换站点导航/菜单导致布局错乱
 const UI_CONTAINER_SELECTOR = [

@@ -3,7 +3,7 @@
  * 提取自 content.js
  */
 
-import { CEFR_LEVELS } from '../config/constants.js';
+import { CEFR_LEVELS } from '../config/constants';
 
 /**
  * 规范化 CEFR 等级字符串为标准形式（A1/A2/B1/B2/C1/C2）

@@ -1,4 +1,4 @@
-import { ALLOW_CONTENTEDITABLE_SELECTORS } from '../config/constants.js';
+import { ALLOW_CONTENTEDITABLE_SELECTORS } from '../config/constants';
 
 export function isInAllowedContentEditableRegion(element) {
   if (!element || typeof element.closest !== 'function') return false;

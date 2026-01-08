@@ -4,7 +4,7 @@
  * AudioContext.decodeAudioData() 直接解码 ArrayBuffer，不需要 blob: URL
  */
 
-import { showToast } from '../ui/toast.js';
+import { showToast } from '../ui/toast';
 
 // Web Audio API 状态
 let audioContext = null;

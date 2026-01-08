@@ -5,7 +5,13 @@
   "scripts": {
     "build": "node scripts/build.js",
     "watch": "node scripts/build.js --watch",
-    "mock": "node test/mock-server.js"
+    "mock": "node test/mock-server.js",
+    "dev": "wxt dev",
+    "dev:firefox": "wxt dev -b firefox",
+    "build:wxt": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox"
   },
   "keywords": [
     "chrome-extension",
@@ -20,6 +26,8 @@
     "segmentit": "^2.0.3"
   },
   "devDependencies": {
-    "esbuild": "^0.24.0"
+    "esbuild": "^0.24.0",
+    "wxt": "^0.20.13",
+    "@types/chrome": "^0.0.277"
   }
 }

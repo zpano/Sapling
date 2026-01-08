@@ -3,7 +3,7 @@
  * 提取自 content.js
  */
 
-import { STOP_WORDS } from '../config/constants.js';
+import { STOP_WORDS } from '../config/constants';
 
 /**
  * 对文本进行分词

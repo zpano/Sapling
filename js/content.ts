@@ -1,15 +1,15 @@
-import { CEFR_LEVELS, INTENSITY_CONFIG, SKIP_TAGS, SKIP_CLASSES } from './config/constants.js';
-import { CACHE_CONFIG, DEFAULT_THEME, normalizeCacheMaxSize, normalizeConcurrencyLimit, normalizeMaxBatchSize } from './core/config.js';
-import { storage } from './core/storage/StorageService.js';
-import { initLanguageDetector, detectLanguage } from './utils/language-detector.js';
-import { isDifficultyCompatible, isCodeText, isNonLearningWord } from './utils/word-filters.js';
-import { isInAllowedContentEditableRegion } from './utils/dom-utils.js';
-import { applyThemeVariables } from './utils/color-utils.js';
-import { TooltipManager } from './ui/tooltip.js';
-import { showToast } from './ui/toast.js';
-import { apiService } from './services/api-service.js';
-import { contentSegmenter } from './services/content-segmenter.js';
-import { textReplacer } from './services/text-replacer.js';
+import { CEFR_LEVELS, INTENSITY_CONFIG, SKIP_TAGS, SKIP_CLASSES } from './config/constants';
+import { CACHE_CONFIG, DEFAULT_THEME, normalizeCacheMaxSize, normalizeConcurrencyLimit, normalizeMaxBatchSize } from './core/config';
+import { storage } from './core/storage/StorageService';
+import { initLanguageDetector, detectLanguage } from './utils/language-detector';
+import { isDifficultyCompatible, isCodeText, isNonLearningWord } from './utils/word-filters';
+import { isInAllowedContentEditableRegion } from './utils/dom-utils';
+import { applyThemeVariables } from './utils/color-utils';
+import { TooltipManager } from './ui/tooltip';
+import { showToast } from './ui/toast';
+import { apiService } from './services/api-service';
+import { contentSegmenter } from './services/content-segmenter';
+import { textReplacer } from './services/text-replacer';
 
 // ============ 状态管理 ============
 let config = null;

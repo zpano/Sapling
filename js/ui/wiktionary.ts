@@ -3,8 +3,8 @@
  * 提取自 content.js
  */
 
-import { storage } from '../core/storage/StorageService.js';
-import { playAudioUrl } from '../services/audio-service.js';
+import { storage } from '../core/storage/StorageService';
+import { playAudioUrl } from '../services/audio-service';
 
 // 词典缓存
 const dictionaryCache = new Map();
