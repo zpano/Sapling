@@ -1,4 +1,4 @@
-name: 正式发布
+name: Release
 
 on:
   push:
@@ -13,52 +13,52 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 检出代码
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 设置 Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: 安装依赖
+      - name: Install dependencies
         run: npm ci
 
-      - name: 从 tag 提取版本号
+      - name: Extract version from tag
         id: version
         run: |
-          # 去掉 tag 的 'v' 前缀（例如：v1.0.0 -> 1.0.0）
+          # Strip leading 'v' from the tag (e.g. v1.0.0 -> 1.0.0)
           VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "timestamp=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "timestamp=$(date -u +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_OUTPUT"
 
-      - name: 生成发布包
+      - name: Build release artifacts
         run: |
           chmod +x scripts/package.sh
           ./scripts/package.sh --browser chrome --output "Sapling-${{ steps.version.outputs.version }}-chrome.zip"
           ./scripts/package.sh --browser firefox --output "Sapling-${{ steps.version.outputs.version }}-firefox.zip"
           ./scripts/package.sh --browser edge --output "Sapling-${{ steps.version.outputs.version }}-edge.zip"
 
-      - name: 创建发布
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           name: Sapling v${{ steps.version.outputs.version }}
           body: |
             ## Sapling v${{ steps.version.outputs.version }}
 
-            **发布时间:** ${{ steps.version.outputs.timestamp }}
+            **Published at:** ${{ steps.version.outputs.timestamp }} UTC
 
-            ### 安装方法
-            - Chrome: 下载 `Sapling-${{ steps.version.outputs.version }}-chrome.zip`，解压后在 `chrome://extensions/` 加载“已解压的扩展程序”
-            - Edge: 下载 `Sapling-${{ steps.version.outputs.version }}-edge.zip`，解压后在 `edge://extensions/` 加载“加载解压缩的扩展”
-            - Firefox: 下载 `Sapling-${{ steps.version.outputs.version }}-firefox.zip`，解压后在 `about:debugging#/runtime/this-firefox` 临时加载 `manifest.json`
+            ### Installation (Developer Mode)
+            - Chrome: Download `Sapling-${{ steps.version.outputs.version }}-chrome.zip`, unzip, then load unpacked at `chrome://extensions/`
+            - Edge: Download `Sapling-${{ steps.version.outputs.version }}-edge.zip`, unzip, then load unpacked at `edge://extensions/`
+            - Firefox: Download `Sapling-${{ steps.version.outputs.version }}-firefox.zip`, unzip, then temporarily load `manifest.json` at `about:debugging#/runtime/this-firefox`
 
-            ### 更新日志
-            请查看下方的 commits 历史了解详细变更。
+            ### Changelog
+            See the commits history below for detailed changes.
 
             ---
 
-            **完整功能说明**: https://github.com/zpano/Sapling#readme
+            **Full documentation**: https://github.com/zpano/Sapling#readme
           files: release/*.zip
           draft: false
           prerelease: false
