@@ -31,6 +31,22 @@ npm run zip:firefox
 
 本项目已迁移到 **WXT** 框架（Vite 构建 + TS），不再使用 legacy 的 `js/` + 手工 `manifest.json` + `vendor/` 打包流程。
 
+## Dev API 配置（仅 dev）
+
+开发时可用 `.env.development.local` 强制覆盖 content script 运行时使用的 API 配置，避免反复去设置页修改（仅覆盖 `apiEndpoint/apiKey/modelName`，不写入 storage）。
+
+```bash
+cp .env.development.local.example .env.development.local
+```
+
+变量：
+- `VITE_SAPLING_API_ENDPOINT`（非空才覆盖）
+- `VITE_SAPLING_MODEL_NAME`（非空才覆盖）
+- `VITE_SAPLING_API_KEY`（允许为空，若定义则覆盖）
+
+优先级：
+- `?sapling-mock=1` 测试模式 > `.env.development.local` > storage/默认值
+
 ## Testing
 
 未配置自动化测试；主要依赖手工验证（加载 `.output/*/manifest.json` 到浏览器扩展管理页）。

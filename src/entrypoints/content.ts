@@ -272,9 +272,9 @@ async function loadConfig(): Promise<ContentConfig> {
       const targetLanguage = toNonEmptyString(safeResult.targetLanguage) ?? 'en';
 
       config = {
-        apiEndpoint: activeApiProfile?.apiEndpoint || toNonEmptyString(safeResult.apiEndpoint) || 'https://api.deepseek.com/chat/completions',
+        apiEndpoint: activeApiProfile?.apiEndpoint || toNonEmptyString(safeResult.apiEndpoint) || 'https://api.openai.com/v1/chat/completions',
         apiKey: activeApiProfile?.apiKey ?? (typeof safeResult.apiKey === 'string' ? safeResult.apiKey : ''),
-        modelName: activeApiProfile?.modelName || toNonEmptyString(safeResult.modelName) || 'deepseek-chat',
+        modelName: activeApiProfile?.modelName || toNonEmptyString(safeResult.modelName) || 'gpt-4o-mini',
         apiProfiles,
         activeApiProfileId: activeApiProfileId ?? null,
 
@@ -318,6 +318,17 @@ async function loadConfig(): Promise<ContentConfig> {
         vocabTestSkipped: toBoolean(safeResult.vocabTestSkipped, false),
         vocabTestResult: safeResult.vocabTestResult
       };
+
+      // 开发模式：允许用 .env.development.local 强制覆盖 API 配置，避免反复手动改设置页
+      if (import.meta.env.DEV) {
+        const devEndpoint = toNonEmptyString(import.meta.env.VITE_SAPLING_API_ENDPOINT);
+        const devModelName = toNonEmptyString(import.meta.env.VITE_SAPLING_MODEL_NAME);
+        const devApiKey = import.meta.env.VITE_SAPLING_API_KEY;
+
+        if (devEndpoint) config.apiEndpoint = devEndpoint;
+        if (devModelName) config.modelName = devModelName;
+        if (typeof devApiKey !== 'undefined') config.apiKey = String(devApiKey);
+      }
 
       // 测试模式：URL 参数 ?sapling-mock=1 时自动切换到本地 Mock 服务器
       if (window.location.search.includes('sapling-mock=1')) {

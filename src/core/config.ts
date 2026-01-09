@@ -35,26 +35,6 @@ export const API_PRESETS = {
     name: 'OpenAI',
     endpoint: 'https://api.openai.com/v1/chat/completions',
     model: 'gpt-4o-mini'
-  },
-  deepseek: {
-    name: 'DeepSeek',
-    endpoint: 'https://api.deepseek.com/chat/completions',
-    model: 'deepseek-chat'
-  },
-  moonshot: {
-    name: 'Moonshot',
-    endpoint: 'https://api.moonshot.cn/v1/chat/completions',
-    model: 'moonshot-v1-8k'
-  },
-  groq: {
-    name: 'Groq',
-    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
-    model: 'llama-3.1-8b-instant'
-  },
-  ollama: {
-    name: 'Ollama (本地)',
-    endpoint: 'http://localhost:11434/v1/chat/completions',
-    model: 'qwen2.5:7b'
   }
 };
 
@@ -70,9 +50,9 @@ export const DEFAULT_THEME: ThemeConfig = {
 // 默认配置
 export const DEFAULT_CONFIG: SaplingConfig = {
   // API 配置
-  apiEndpoint: API_PRESETS.deepseek.endpoint,
+  apiEndpoint: API_PRESETS.openai.endpoint,
   apiKey: '',
-  modelName: API_PRESETS.deepseek.model,
+  modelName: API_PRESETS.openai.model,
   apiProfiles: [],
   activeApiProfileId: null,
   

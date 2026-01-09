@@ -19,14 +19,8 @@ import type {
 } from '~/types/messages';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // API 预设
-  const API_PRESETS = {
-    openai: { endpoint: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o-mini' },
-    deepseek: { endpoint: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat' },
-    moonshot: { endpoint: 'https://api.moonshot.cn/v1/chat/completions', model: 'moonshot-v1-8k' },
-    groq: { endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.1-8b-instant' },
-    ollama: { endpoint: 'http://localhost:11434/v1/chat/completions', model: 'qwen2.5:7b' }
-  };
+  const DEFAULT_API_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
+  const DEFAULT_MODEL_NAME = 'gpt-4o-mini';
 
   function generateApiProfileId() {
     return `api_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -58,9 +52,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   function suggestNextApiProfileName(profiles) {
     const base = '自定义配置';
     const existing = new Set((profiles || []).map(p => String(p?.name || '').trim()));
-    if (!existing.has(base)) return base;
-    for (let i = 2; i < 1000; i++) {
-      const candidate = `${base} ${i}`;
+    for (let i = 1; i < 1000; i++) {
+      const candidate = `${base}${i}`;
       if (!existing.has(candidate)) return candidate;
     }
     return `${base} ${Date.now()}`;
@@ -127,7 +120,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     sections: document.querySelectorAll('.settings-section'),
 
     // API 配置
-    presetBtns: document.querySelectorAll('.preset-buttons .preset-btn[data-preset]'),
     addApiProfileBtn: document.getElementById('addApiProfileBtn'),
     apiProfileButtons: document.getElementById('apiProfileButtons'),
     renameApiProfileBtn: document.getElementById('renameApiProfileBtn'),
@@ -382,9 +374,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         : null;
 
       // API 配置
-      elements.apiEndpoint.value = activeProfile?.apiEndpoint || syncResult.apiEndpoint || API_PRESETS.deepseek.endpoint;
+      elements.apiEndpoint.value = activeProfile?.apiEndpoint || syncResult.apiEndpoint || DEFAULT_API_ENDPOINT;
       elements.apiKey.value = activeProfile?.apiKey || syncResult.apiKey || '';
-      elements.modelName.value = activeProfile?.modelName || syncResult.modelName || API_PRESETS.deepseek.model;
+      elements.modelName.value = activeProfile?.modelName || syncResult.modelName || DEFAULT_MODEL_NAME;
       renderApiProfiles();
 
       // 学习偏好
@@ -520,7 +512,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     elements.apiKey.value = profile.apiKey || '';
     elements.modelName.value = profile.modelName || '';
 
-    elements.presetBtns.forEach(b => b.classList.remove('active'));
     renderApiProfiles();
     debouncedSave(200);
   }
@@ -585,7 +576,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    elements.presetBtns.forEach(b => b.classList.remove('active'));
     renderApiProfiles();
     debouncedSave(0);
     showOptionsToast('已删除', { type: 'success', durationMs: 1400 });
@@ -1246,23 +1236,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         item.classList.add('active');
         document.getElementById(section).classList.add('active');
-      });
-    });
-
-    // 预设按钮
-    elements.presetBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const preset = API_PRESETS[btn.dataset.preset];
-        if (preset) {
-          elements.apiEndpoint.value = preset.endpoint;
-          elements.modelName.value = preset.model;
-
-          elements.presetBtns.forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-
-          // 预设按钮改变时立即保存
-          debouncedSave(200);
-        }
       });
     });
 

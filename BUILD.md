@@ -32,6 +32,24 @@ pnpm dev:firefox
 
 开发模式输出目录：`.output/chrome-mv3-dev/` 或 `.output/firefox-mv3-dev/`
 
+## 开发者 API 配置（仅 dev）
+
+在 `pnpm dev` / `npm run dev` 时，可以用 `.env.development.local` 强制覆盖 content script 的 API 配置，避免每次都去设置页手动修改。
+
+```bash
+cp .env.development.local.example .env.development.local
+```
+
+可用变量：
+- `VITE_SAPLING_API_ENDPOINT`：API 端点（非空才会覆盖）
+- `VITE_SAPLING_MODEL_NAME`：模型名称（非空才会覆盖）
+- `VITE_SAPLING_API_KEY`：API Key（即使为空也会覆盖，便于临时清空）
+
+说明：
+- 仅在开发模式生效（`import.meta.env.DEV`）。
+- `?sapling-mock=1` 的测试模式优先级更高（会覆盖 `apiEndpoint`）。
+- `.env*.local` 已加入 `.gitignore`，不要提交真实 Key。
+
 ### 3. 生产构建
 
 ```bash

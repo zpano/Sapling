@@ -9,3 +9,6 @@ dist/
 # WXT
 .output/
 .wxt/
+
+# 本地开发环境变量（避免提交 API Key）
+.env*.local

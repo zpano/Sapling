@@ -3,7 +3,7 @@
  * 处理扩展级别的事件和消息
  */
 
-import { CACHE_CONFIG, DEFAULT_THEME, normalizeCacheMaxSize } from '~/core/config';
+import { API_PRESETS, CACHE_CONFIG, DEFAULT_THEME, normalizeCacheMaxSize } from '~/core/config';
 import { storage } from '~/core/storage/StorageService';
 import type {
     BackgroundRequest,
@@ -17,9 +17,89 @@ import type {
     TestApiResponse,
     TogglePageProcessingResponse
 } from '~/types/messages';
+import type { ApiProfile } from '~/types/config';
 
 const MENU_ID_ADD_MEMORIZE = 'Sapling-add-memorize';
 const MENU_ID_TOGGLE_PAGE = 'Sapling-process-page';
+
+const DEFAULT_API_PROFILE_ID = 'sapling_api_profile_custom_1';
+const DEFAULT_API_PROFILE_NAME = '自定义配置1';
+const LEGACY_DEFAULT_API_PROFILE_NAME = '自定义1';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object';
+}
+
+function toNonEmptyString(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+}
+
+function normalizeApiProfiles(value: unknown): ApiProfile[] {
+    if (!Array.isArray(value)) return [];
+    const seen = new Set<string>();
+    const profiles: ApiProfile[] = [];
+
+    for (const item of value) {
+        if (!isRecord(item)) continue;
+        const id = toNonEmptyString(item.id);
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+
+        profiles.push({
+            id,
+            name: toNonEmptyString(item.name) ?? '未命名',
+            apiEndpoint: toNonEmptyString(item.apiEndpoint) ?? '',
+            apiKey: typeof item.apiKey === 'string' ? item.apiKey : '',
+            modelName: toNonEmptyString(item.modelName) ?? ''
+        });
+    }
+
+    return profiles;
+}
+
+function getDefaultApiProfile(): ApiProfile {
+    return {
+        id: DEFAULT_API_PROFILE_ID,
+        name: DEFAULT_API_PROFILE_NAME,
+        apiEndpoint: API_PRESETS.openai.endpoint,
+        apiKey: '',
+        modelName: API_PRESETS.openai.model
+    };
+}
+
+async function ensureDefaultApiProfile({ reason }: { reason: string }) {
+    if (reason !== 'update') return;
+
+    const { apiProfiles, apiKey } = await storage.remote.getAsync(['apiProfiles', 'apiKey']);
+    const normalizedProfiles = normalizeApiProfiles(apiProfiles);
+    if (normalizedProfiles.length > 0) return;
+
+    const defaultProfile = getDefaultApiProfile();
+    const legacyKey = typeof apiKey === 'string' ? apiKey : '';
+    const shouldActivateDefault = legacyKey.trim().length === 0;
+
+    await storage.remote.setAsync({
+        apiProfiles: [defaultProfile],
+        ...(shouldActivateDefault ? { activeApiProfileId: defaultProfile.id } : {})
+    });
+}
+
+async function migrateLegacyDefaultApiProfileName({ reason }: { reason: string }) {
+    if (reason !== 'update') return;
+
+    const { apiProfiles } = await storage.remote.getAsync(['apiProfiles']);
+    const normalizedProfiles = normalizeApiProfiles(apiProfiles);
+    const idx = normalizedProfiles.findIndex(profile => profile.id === DEFAULT_API_PROFILE_ID);
+    if (idx < 0) return;
+
+    const current = normalizedProfiles[idx];
+    if (current.name !== LEGACY_DEFAULT_API_PROFILE_NAME) return;
+
+    normalizedProfiles[idx] = { ...current, name: DEFAULT_API_PROFILE_NAME };
+    await storage.remote.setAsync({ apiProfiles: normalizedProfiles });
+}
 
 function isPageProcessed(status: ContentResponseFor<'getStatus'> | null) {
     if (!status) return false;
@@ -139,11 +219,14 @@ export default defineBackground(() => {
 
         // 设置默认配置
         if (details.reason === 'install') {
+            const defaultProfile = getDefaultApiProfile();
             // sync 存储：配置项（避免存储大数组以防超过 100KB 配额）
             storage.remote.set({
-                apiEndpoint: 'https://api.deepseek.com/chat/completions',
+                apiEndpoint: defaultProfile.apiEndpoint,
                 apiKey: '',
-                modelName: 'deepseek-chat',
+                modelName: defaultProfile.modelName,
+                apiProfiles: [defaultProfile],
+                activeApiProfileId: defaultProfile.id,
                 nativeLanguage: 'zh-CN',
                 targetLanguage: 'en',
                 difficultyLevel: 'B1',
@@ -182,6 +265,12 @@ export default defineBackground(() => {
             storage.remote.get('cacheMaxSize', (result) => {
                 if (result.cacheMaxSize == null) storage.remote.set({ cacheMaxSize: CACHE_CONFIG.maxSize }, () => { });
             });
+            try {
+                await ensureDefaultApiProfile({ reason: details.reason });
+                await migrateLegacyDefaultApiProfileName({ reason: details.reason });
+            } catch (error) {
+                console.error('[Sapling] 确保默认 API 配置失败：', error);
+            }
         }
 
         // 创建右键菜单
