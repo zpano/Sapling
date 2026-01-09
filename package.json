@@ -10,9 +10,7 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "postinstall": "wxt prepare",
-    "mock": "node test/mock-server.js",
-    "legacy:build": "node scripts/build.js",
-    "legacy:watch": "node scripts/build.js --watch"
+    "mock": "node test/mock-server.js"
   },
   "keywords": [
     "chrome-extension",

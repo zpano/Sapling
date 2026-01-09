@@ -8,13 +8,9 @@
         ],
         "moduleResolution": "bundler",
         "resolveJsonModule": true,
-        "allowJs": true,
-        "checkJs": false,
+        "allowJs": false,
         "strict": false,
         "skipLibCheck": true,
-        "types": [
-            "chrome"
-        ],
         "paths": {
             "~/*": [
                 "./src/*"
@@ -25,8 +21,9 @@
         }
     },
     "include": [
+        "types/**/*",
         "src/**/*",
-        "entrypoints/**/*",
+        "src/entrypoints/**/*",
         "wxt.config.ts"
     ]
 }

@@ -333,7 +333,7 @@ Sapling/
 │   ├── popup.css           # 弹出窗口样式
 │   ├── theme.css           # 主题变量
 │   └── ui-controls.css     # 通用控件样式
-├── components/ui/content.css # content script 注入样式（高亮/下划线/tooltip）
+├── src/ui/content.css # content script 注入样式（高亮/下划线/tooltip）
 ├── dist/                   # 构建产物（content script bundle）
 │   ├── content.js
 │   └── content.js.map

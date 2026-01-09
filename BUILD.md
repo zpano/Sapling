@@ -63,12 +63,12 @@ pnpm build:firefox
 
 ```
 Sapling/
-├── entrypoints/          # 扩展入口点
-│   ├── background.ts     # Background Service Worker
-│   ├── content.ts        # Content Script
-│   ├── popup/            # Popup 页面
-│   └── options/          # Options 页面
-├── components/           # 共享组件和服务
+├── src/                  # 源码目录（WXT 的 `~` 指向此处）
+│   ├── entrypoints/      # 扩展入口点
+│   │   ├── background.ts # Background Service Worker
+│   │   ├── content.ts    # Content Script
+│   │   ├── popup/        # Popup 页面
+│   │   └── options/      # Options 页面
 │   ├── services/         # API、分词、替换服务
 │   ├── ui/               # UI 组件
 │   └── utils/            # 工具函数

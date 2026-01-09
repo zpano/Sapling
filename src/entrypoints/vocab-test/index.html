@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sapling - 词汇量测试</title>
+  <link rel="stylesheet" href="/css/theme.css" wxt-ignore>
+  <link rel="stylesheet" href="/css/ui-controls.css" wxt-ignore>
+  <link rel="stylesheet" href="/css/vocab-test.css" wxt-ignore>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <img src="icons/icon.png" alt="Sapling Logo">
+      <h1>Sapling</h1>
+      <p>沉浸式语言学习</p>
+    </div>
+
+    <div class="card">
+      <!-- 欢迎界面 -->
+      <div class="welcome-screen" id="welcomeScreen">
+        <h2>🎯 词汇量测试</h2>
+        <p>通过这个简单的测试，我们将为您推荐最适合的学习难度等级。</p>
+        <p>测试只需要 2-3 分钟，包含不同难度的英语单词。</p>
+
+        <div class="test-info">
+          <h3>📋 测试说明</h3>
+          <p>• 您将看到一个英语单词</p>
+          <p>• 如果您认识这个单词，点击「认识」</p>
+          <p>• 如果不认识，点击「不认识」</p>
+          <p>• 系统会根据您的回答计算适合的难度</p>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="startTestBtn">开始测试</button>
+          <button class="btn btn-secondary" id="skipTestBtn">跳过测试</button>
+        </div>
+
+        <p class="hint">测试结果仅用于推荐，您可以随时在设置中调整难度</p>
+      </div>
+
+      <!-- 测试界面 -->
+      <div class="test-screen" id="testScreen">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">正在测试: A1 级别 (1/5)</div>
+
+        <div class="word-card">
+          <div class="level-badge" id="levelBadge">A1</div>
+          <div class="word" id="wordDisplay">hello</div>
+          <div class="example" id="exampleDisplay">Hello, how are you?</div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-secondary" id="dontKnowBtn">不认识</button>
+          <button class="btn btn-primary" id="knowBtn">认识</button>
+        </div>
+      </div>
+
+      <!-- 结果界面 -->
+      <div class="result-screen" id="resultScreen">
+        <h2>🎉 测试完成！</h2>
+        <div class="result-level" id="resultLevel">B1</div>
+
+        <div class="result-description" id="resultDescription">
+          <h3>进阶级 (B1)</h3>
+          <p>能够理解工作、学习和休闲等熟悉话题的要点。</p>
+          <p>词汇量: 约 2000-3000 个词汇</p>
+        </div>
+
+        <div class="stats" id="statsDisplay"></div>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="finishBtn">完成设置</button>
+        </div>
+
+        <p class="hint">您的难度等级已保存，可以随时在设置中调整</p>
+      </div>
+
+      <!-- 加载界面 -->
+      <div class="loading" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <p style="margin-top: 16px;">正在保存设置...</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

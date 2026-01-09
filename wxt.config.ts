@@ -1,7 +1,7 @@
 import { defineConfig } from 'wxt';
-import path from 'path';
 
 export default defineConfig({
+    srcDir: 'src',
     manifest: {
         name: '__MSG_extensionName__',
         description: '__MSG_extensionDescription__',
@@ -37,9 +37,7 @@ export default defineConfig({
             resources: [
                 'icons/*',
                 'css/*',
-                'wordlist/*',
-                'audio-player.html',
-                'audio-player.js'
+                'wordlist/*'
             ],
             matches: ['<all_urls>']
         }],
@@ -64,15 +62,10 @@ export default defineConfig({
                 manifest.options_ui.open_in_tab = true;
             }
 
-            // 注意：content_scripts由WXT自动从entrypoints/content.ts生成
+            // 注意：content_scripts 由 WXT 自动从 `src/entrypoints/content.ts` 生成
             // 不需要手动配置
 
             return manifest;
         }
     },
-
-    // 路径别名
-    alias: {
-        '~': path.resolve(__dirname, 'components')
-    }
 });
