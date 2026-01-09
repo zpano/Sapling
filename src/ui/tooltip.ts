@@ -29,6 +29,38 @@ export class TooltipManager {
     this.config = null;
   }
 
+  private getTooltipMountNode() {
+    return document.body || document.documentElement;
+  }
+
+  private escapeRegExp(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private setInlineStyle(element: HTMLElement, property: string, value: string) {
+    try {
+      const style = (element as unknown as { style?: unknown }).style;
+      if (style && typeof (style as CSSStyleDeclaration).setProperty === 'function') {
+        (style as CSSStyleDeclaration).setProperty(property, value);
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    // Fallback: some pages may tamper with `element.style` getter; use style attribute directly.
+    const existing = element.getAttribute('style') || '';
+    const key = this.escapeRegExp(property);
+    const cleaned = existing.replace(new RegExp(`(^|;)\\s*${key}\\s*:[^;]*`, 'gi'), '$1').trim();
+    const next = `${cleaned}${cleaned && !cleaned.endsWith(';') ? ';' : ''} ${property}: ${value};`.trim();
+    element.setAttribute('style', next);
+  }
+
+  private setTooltipStyle(property: string, value: string) {
+    if (!this.tooltip) return;
+    this.setInlineStyle(this.tooltip, property, value);
+  }
+
   /**
    * 将 tooltip 定位到屏幕内（避免溢出/被遮挡）
    * Tooltip 采用 fixed 定位，坐标基于 viewport
@@ -41,9 +73,9 @@ export class TooltipManager {
     const gap = 8;
 
     // 先把 tooltip 放到屏幕外，确保测量到正确尺寸
-    this.tooltip.style.left = '-9999px';
-    this.tooltip.style.top = '-9999px';
-    this.tooltip.style.display = 'block';
+    this.setTooltipStyle('left', '-9999px');
+    this.setTooltipStyle('top', '-9999px');
+    this.setTooltipStyle('display', 'block');
 
     const tooltipRect = this.tooltip.getBoundingClientRect();
     const width = tooltipRect.width || 0;
@@ -63,8 +95,8 @@ export class TooltipManager {
     let left = targetRect.left;
     left = Math.min(vw - width - margin, Math.max(margin, left));
 
-    this.tooltip.style.left = `${left}px`;
-    this.tooltip.style.top = `${top}px`;
+    this.setTooltipStyle('left', `${left}px`);
+    this.setTooltipStyle('top', `${top}px`);
   }
 
   escapeHtml(value: unknown) {
@@ -88,12 +120,22 @@ export class TooltipManager {
    * 创建 Tooltip 元素
    */
   createTooltip() {
-    if (this.tooltip) return;
+    const mountNode = this.getTooltipMountNode();
+    if (!mountNode) return;
 
-    this.tooltip = document.createElement('div');
-    this.tooltip.className = 'Sapling-tooltip';
-    this.tooltip.style.display = 'none';
-    document.body.appendChild(this.tooltip);
+    const shouldHide = !this.tooltip || !this.tooltip.isConnected;
+
+    if (!this.tooltip) {
+      this.tooltip = document.createElement('div');
+      this.tooltip.className = 'Sapling-tooltip';
+      mountNode.appendChild(this.tooltip);
+    } else if (!this.tooltip.isConnected) {
+      mountNode.appendChild(this.tooltip);
+    }
+
+    if (shouldHide) {
+      this.setTooltipStyle('display', 'none');
+    }
   }
 
   /**
@@ -101,6 +143,7 @@ export class TooltipManager {
    * @param {HTMLElement} element - 翻译元素
    */
   async show(element: HTMLElement) {
+    this.createTooltip();
     if (!this.tooltip || !element.classList?.contains('Sapling-translated')) return;
 
     // 取消待处理的隐藏操作
@@ -318,12 +361,12 @@ export class TooltipManager {
     }
 
     if (immediate) {
-      if (this.tooltip) this.tooltip.style.display = 'none';
+      this.setTooltipStyle('display', 'none');
       this.currentTooltipElement = null;
     } else {
       // 延迟隐藏，给用户时间移动到 tooltip
       this.tooltipHideTimeout = setTimeout(() => {
-        if (this.tooltip) this.tooltip.style.display = 'none';
+        this.setTooltipStyle('display', 'none');
         this.currentTooltipElement = null;
         this.tooltipHideTimeout = null;
       }, 150);
