@@ -67,7 +67,7 @@ export const DEFAULT_CONFIG: SaplingConfig = {
   showPhonetic: true,
   allowLeftClickPronunciation: true,
   restoreAllSameWordsOnLearned: true,
-  pronunciationProvider: 'wiktionary',
+  pronunciationProvider: 'google',
   youdaoPronunciationType: 2,
   enabled: true,
   
