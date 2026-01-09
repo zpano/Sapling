@@ -109,6 +109,7 @@ pnpm build:firefox    # Firefox 生产构建
 # 测试
 pnpm zip              # 打包为 .zip（用于发布）
 pnpm zip:firefox      # 打包 Firefox 版本
+pnpm zip:edge         # 打包 Edge 版本
 
 # 代码质量
 pnpm postinstall      # 更新 WXT 模块（自动运行）
@@ -173,22 +174,24 @@ pnpm build
 ### 创建发布包
 
 ```bash
-# 构建并打包
-pnpm build
-pnpm zip
+# 直接使用 WXT 生成 zip（产物位于 .output/*.zip）
+pnpm zip                    # Chrome
+pnpm zip:firefox            # Firefox
+pnpm zip:edge               # Edge
 
-# Firefox 版本
-pnpm build:firefox
-pnpm zip:firefox
+# CI 使用的统一打包脚本（产物位于 release/*.zip，可自定义文件名）
+./scripts/package.sh --browser chrome --output Sapling-1.0.0-chrome.zip
+./scripts/package.sh --browser firefox --output Sapling-1.0.0-firefox.zip
+./scripts/package.sh --browser edge --output Sapling-1.0.0-edge.zip
 ```
 
-打包文件位于：`.output/*.zip`
+打包文件位于：`.output/*.zip`（WXT）或 `release/*.zip`（`scripts/package.sh`）
 
 ### 提交前检查清单
 
 - [ ] 更新 `package.json` 中的版本号
 - [ ] 更新 `wxt.config.ts` 中的 manifest 版本
-- [ ] 运行完整构建测试（Chrome + Firefox）
+- [ ] 运行完整构建测试（Chrome + Firefox + Edge）
 - [ ] 测试核心功能（翻译、缓存、配置）
 - [ ] 检查 console 无错误和警告
 - [ ] 清理调试代码和临时日志
