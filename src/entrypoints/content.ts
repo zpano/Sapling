@@ -226,6 +226,7 @@ const langBatchQueue = new Map<string, LangQueue>();
 // 队列处理函数引用（在 processPage 中设置）
 let queueProcessBatchFn: ProcessBatchFn | null = null;
 let queueRunGeneration = 0;
+let messageListenerInitialized = false;
 
 function normalizeDomainEntry(entry: unknown): string {
   if (!entry) return '';
@@ -1285,6 +1286,72 @@ async function processPage(viewportOnly = false): Promise<{ processed: number; s
   }
 }
 
+function setupMessageListener(): void {
+  if (messageListenerInitialized) return;
+  messageListenerInitialized = true;
+  chrome.runtime.onMessage.addListener((message: ContentRequest, sender, sendResponse: (response: unknown) => void) => {
+    console.log('[Sapling] Received message:', message);
+    if (message.action === 'processPage') {
+      if (isHostnameBlacklisted(window.location.hostname, config?.blacklistNormalized ?? config?.blacklist ?? [])) {
+        console.log('[Sapling] Ignoring processPage request for blacklisted site');
+        sendResponse({ processed: 0, blacklisted: true } satisfies ProcessPageResponse);
+        return true;
+      }
+      isPageActivated = true;  // 激活页面处理，滚动时继续处理
+      const viewportOnly = !(config?.processFullPage ?? false);
+      processPage(viewportOnly).then((result) => sendResponse(result satisfies ProcessPageResponse));
+      return true;
+    }
+    if (message.action === 'restorePage') {
+      restoreAll();
+      sendResponse({ success: true } satisfies RestorePageResponse);
+    }
+    if (message.action === 'processSpecificWords') {
+      const words = Array.isArray(message.words) ? message.words.filter((w): w is string => typeof w === 'string') : [];
+      if (words.length > 0) {
+        processSpecificWords(words).then(count => {
+          sendResponse({ success: true, count } satisfies ProcessSpecificWordsResponse);
+        }).catch(error => {
+          console.error('[Sapling] Error processing specific words:', error);
+
+          // 显示错误提示
+          if (isApiError(error)) {
+            showToast(`Sapling: ${getErrorMessage(error)}`, { type: 'error', duration: 3000 });
+          } else {
+            showToast(`Sapling: 处理单词时出错 - ${getErrorMessage(error)}`, { type: 'error', duration: 3000 });
+          }
+
+          sendResponse({ success: false, error: getErrorMessage(error) } satisfies ProcessSpecificWordsResponse);
+        });
+        return true;
+      } else {
+        sendResponse({ success: false, error: 'No words provided' } satisfies ProcessSpecificWordsResponse);
+      }
+    }
+    if (message.action === 'getStatus') {
+      const hasTranslations = !!document.querySelector('.Sapling-translated');
+      const hasProcessedMarkers = !!document.querySelector('[data-Sapling-processed]');
+      sendResponse({
+        processed: contentSegmenter.getProcessedCount(),
+        hasTranslations,
+        hasProcessedMarkers,
+        isProcessing,
+        enabled: config?.enabled
+      } satisfies GetStatusResponse);
+    }
+    if (message.action === 'clearCache' || message.action === 'resetAllData') {
+      clearWordCache({ removeStorage: true })
+        .then(() => sendResponse({ success: true } satisfies ClearCacheOrResetAllResponse))
+        .catch((error) => {
+          console.error('[Sapling] Error clearing cache:', error);
+          showToast(`Sapling: 清空缓存失败 - ${getErrorMessage(error)}`, { type: 'error', duration: 3000 });
+          sendResponse({ success: false, message: getErrorMessage(error) } satisfies ClearCacheOrResetAllResponse);
+        });
+      return true;
+    }
+  });
+}
+
 // ============ 事件处理 ============
 function setupEventListeners(): void {
   console.log('[Sapling] setupEventListeners() started');
@@ -1471,68 +1538,6 @@ function setupEventListeners(): void {
     }
   });
 
-  // 监听来自 popup/background 的消息
-  chrome.runtime.onMessage.addListener((message: ContentRequest, sender, sendResponse: (response: unknown) => void) => {
-    console.log('[Sapling] Received message:', message);
-    if (message.action === 'processPage') {
-      if (isHostnameBlacklisted(window.location.hostname, config?.blacklistNormalized ?? config?.blacklist ?? [])) {
-        console.log('[Sapling] Ignoring processPage request for blacklisted site');
-        sendResponse({ processed: 0, blacklisted: true } satisfies ProcessPageResponse);
-        return true;
-      }
-      isPageActivated = true;  // 激活页面处理，滚动时继续处理
-      const viewportOnly = !(config?.processFullPage ?? false);
-      processPage(viewportOnly).then((result) => sendResponse(result satisfies ProcessPageResponse));
-      return true;
-    }
-    if (message.action === 'restorePage') {
-      restoreAll();
-      sendResponse({ success: true } satisfies RestorePageResponse);
-    }
-    if (message.action === 'processSpecificWords') {
-      const words = Array.isArray(message.words) ? message.words.filter((w): w is string => typeof w === 'string') : [];
-      if (words.length > 0) {
-        processSpecificWords(words).then(count => {
-          sendResponse({ success: true, count } satisfies ProcessSpecificWordsResponse);
-        }).catch(error => {
-          console.error('[Sapling] Error processing specific words:', error);
-
-          // 显示错误提示
-          if (isApiError(error)) {
-            showToast(`Sapling: ${getErrorMessage(error)}`, { type: 'error', duration: 3000 });
-          } else {
-            showToast(`Sapling: 处理单词时出错 - ${getErrorMessage(error)}`, { type: 'error', duration: 3000 });
-          }
-
-          sendResponse({ success: false, error: getErrorMessage(error) } satisfies ProcessSpecificWordsResponse);
-        });
-        return true;
-      } else {
-        sendResponse({ success: false, error: 'No words provided' } satisfies ProcessSpecificWordsResponse);
-      }
-    }
-    if (message.action === 'getStatus') {
-      const hasTranslations = !!document.querySelector('.Sapling-translated');
-      const hasProcessedMarkers = !!document.querySelector('[data-Sapling-processed]');
-      sendResponse({
-        processed: contentSegmenter.getProcessedCount(),
-        hasTranslations,
-        hasProcessedMarkers,
-        isProcessing,
-        enabled: config?.enabled
-      } satisfies GetStatusResponse);
-    }
-    if (message.action === 'clearCache' || message.action === 'resetAllData') {
-      clearWordCache({ removeStorage: true })
-        .then(() => sendResponse({ success: true } satisfies ClearCacheOrResetAllResponse))
-        .catch((error) => {
-          console.error('[Sapling] Error clearing cache:', error);
-          showToast(`Sapling: 清空缓存失败 - ${getErrorMessage(error)}`, { type: 'error', duration: 3000 });
-          sendResponse({ success: false, message: getErrorMessage(error) } satisfies ClearCacheOrResetAllResponse);
-        });
-      return true;
-    }
-  });
 }
 
 function debounce<TArgs extends unknown[]>(func: (...args: TArgs) => void, wait: number) {
@@ -1553,6 +1558,8 @@ async function init(): Promise<void> {
     console.error('[Sapling] loadConfig() failed', e);
     return;
   }
+
+  setupMessageListener();
 
   const hostname = window.location.hostname;
   if (isHostnameBlacklisted(hostname, config?.blacklistNormalized ?? config?.blacklist ?? [])) {
