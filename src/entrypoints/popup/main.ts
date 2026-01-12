@@ -1,0 +1,221 @@
+/**
+ * Sapling Popup 脚本
+ */
+
+// 注意：`public/` 下的 CSS 不能用 ESM `import` 引入（Vite 会报错）。
+// 这里改为在对应 HTML 里用 `<link>` 引用（见 `entrypoints/popup/index.html`）。
+
+import { applyThemeVariables } from '~/utils/color-utils';
+import { storage } from '~/core/storage/StorageService';
+import type {
+  BackgroundAction,
+  BackgroundRequestFor,
+  BackgroundResponseFor,
+  ContentRequestFor,
+  ContentResponseFor
+} from '~/types/messages';
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const DEFAULT_THEME = {
+    brand: '#81C784',
+    background: '#1B1612',
+    card: '#26201A',
+    highlight: '#A5D6A7',
+    underline: '#4E342E',
+    text: '#D7CCC8'
+  };
+
+  function applyThemeFromStorage() {
+    storage.remote.get('theme', (result) => {
+      const theme = { ...DEFAULT_THEME, ...(result?.theme || {}) };
+      applyThemeVariables(theme, DEFAULT_THEME);
+    });
+  }
+
+  applyThemeFromStorage();
+
+  storage.remote.onChanged((changes) => {
+    if (!changes.theme) return;
+    const theme = { ...DEFAULT_THEME, ...(changes.theme.newValue || {}) };
+    applyThemeVariables(theme, DEFAULT_THEME);
+  });
+
+  // DOM 元素
+  const enableToggle = document.getElementById('enableToggle');
+  const toggleLabel = document.getElementById('toggleLabel');
+  const totalWords = document.getElementById('totalWords');
+  const todayWords = document.getElementById('todayWords');
+  const learnedCount = document.getElementById('learnedCount');
+  const memorizeCount = document.getElementById('memorizeCount');
+  const cacheSize = document.getElementById('cacheSize');
+  const hitRate = document.getElementById('hitRate');
+  const processBtn = document.getElementById('processBtn');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const shortcutModKey = document.getElementById('shortcutModKey');
+
+  function sendBackgroundMessage<A extends BackgroundAction>(message: BackgroundRequestFor<A>) {
+    return new Promise<BackgroundResponseFor<A>>((resolve, reject) => {
+      chrome.runtime.sendMessage(message, (response) => {
+        const err = chrome.runtime.lastError;
+        if (err) return reject(new Error(err.message));
+        resolve(response as BackgroundResponseFor<A>);
+      });
+    });
+  }
+
+  async function getActiveTab() {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tabs?.[0] || null;
+  }
+
+  function isPageProcessed(status: { processed?: number; hasTranslations?: boolean; hasProcessedMarkers?: boolean } | null) {
+    if (!status) return false;
+    return Boolean(
+      status.hasTranslations ||
+      status.hasProcessedMarkers ||
+      (Number(status.processed) || 0) > 0
+    );
+  }
+
+  function renderProcessButton(processed: boolean, busy = false) {
+    const text = processed ? '还原当前页面' : '处理当前页面';
+    const busyText = processed ? '还原中...' : '处理中...';
+    const label = busy ? busyText : text;
+    const icon = busy
+      ? `<svg class="spinning" viewBox="0 0 24 24" width="18" height="18">
+          <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/>
+        </svg>`
+      : `<svg viewBox="0 0 24 24" width="18" height="18">
+          <path fill="currentColor" d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+        </svg>`;
+
+    processBtn.innerHTML = `${icon}\n        ${label}\n      `;
+  }
+
+  async function syncPageActionUi() {
+    const tab = await getActiveTab();
+    if (!tab?.id) return;
+    const status = await chrome.tabs.sendMessage(tab.id, { action: 'getStatus' } satisfies ContentRequestFor<'getStatus'>)
+      .catch(() => null) as ContentResponseFor<'getStatus'> | null;
+    renderProcessButton(isPageProcessed(status), false);
+    await sendBackgroundMessage({ action: 'refreshTogglePageMenuTitle', tabId: tab.id });
+  }
+
+  if (shortcutModKey) {
+    chrome.runtime.getPlatformInfo((info) => {
+      shortcutModKey.textContent = info?.os === 'mac' ? 'Option' : 'Alt';
+    });
+  }
+
+  // 加载配置和统计
+  async function loadData() {
+    // 加载启用状态
+    storage.remote.get('enabled', (result) => {
+      const enabled = result.enabled !== false;
+      enableToggle.checked = enabled;
+      toggleLabel.textContent = enabled ? '已启用' : '已禁用';
+      toggleLabel.className = `toggle-label ${enabled ? 'enabled' : 'disabled'}`;
+    });
+
+    try {
+      const response = await sendBackgroundMessage({ action: 'getStats' });
+      totalWords.textContent = formatNumber(response.totalWords);
+      todayWords.textContent = formatNumber(response.todayWords);
+      learnedCount.textContent = formatNumber(response.learnedCount);
+      memorizeCount.textContent = formatNumber(response.memorizeCount);
+
+      const total = response.cacheHits + response.cacheMisses;
+      const rate = total > 0 ? Math.round((response.cacheHits / total) * 100) : 0;
+      hitRate.textContent = rate + '%';
+    } catch {
+      // ignore
+    }
+
+    try {
+      const response = await sendBackgroundMessage({ action: 'getCacheStats' });
+      cacheSize.textContent = `${response.size}/${response.maxSize}`;
+    } catch {
+      // ignore
+    }
+  }
+
+  // 格式化数字
+  function formatNumber(num) {
+    if (num >= 10000) {
+      return (num / 10000).toFixed(1) + '万';
+    }
+    if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'k';
+    }
+    return num.toString();
+  }
+
+  // 切换启用状态
+  enableToggle.addEventListener('change', () => {
+    const enabled = enableToggle.checked;
+    storage.remote.set({ enabled }, () => {
+      toggleLabel.textContent = enabled ? '已启用' : '已禁用';
+      toggleLabel.className = `toggle-label ${enabled ? 'enabled' : 'disabled'}`;
+
+      // 通知内容脚本
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const tab = tabs?.[0];
+        const url = tab?.url || '';
+        if (!tab?.id || (!url.startsWith('http') && !url.startsWith('file:'))) {
+          return;
+        }
+
+        // `chrome.tabs.sendMessage` returns a Promise in MV3; catch to avoid
+        // "Uncaught (in promise) ... Receiving end does not exist" on pages
+        // where content scripts cannot run (e.g. chrome://, Web Store).
+        chrome.tabs.sendMessage(tab.id, {
+          action: enabled ? 'processPage' : 'restorePage'
+        } satisfies ContentRequestFor<'processPage'> | ContentRequestFor<'restorePage'>).catch(() => { });
+
+        void sendBackgroundMessage({ action: 'refreshTogglePageMenuTitle', tabId: tab.id }).catch(() => {});
+      });
+    });
+  });
+
+  // 处理页面按钮
+  processBtn.addEventListener('click', async () => {
+    processBtn.disabled = true;
+    const tab = await getActiveTab();
+    if (!tab?.id) {
+      processBtn.disabled = false;
+      return;
+    }
+
+    const status = await chrome.tabs.sendMessage(tab.id, { action: 'getStatus' } satisfies ContentRequestFor<'getStatus'>)
+      .catch(() => null) as ContentResponseFor<'getStatus'> | null;
+    const processedBefore = isPageProcessed(status);
+    renderProcessButton(processedBefore, true);
+
+    try {
+      await sendBackgroundMessage({ action: 'togglePageProcessing', tabId: tab.id });
+    } catch (e) {
+      console.error('Error processing page:', e);
+    }
+
+    setTimeout(() => {
+      processBtn.disabled = false;
+      syncPageActionUi();
+      loadData();
+    }, 400);
+  });
+
+  // 设置按钮
+  settingsBtn.addEventListener('click', () => {
+    chrome.runtime.openOptionsPage();
+  });
+
+  // 初始加载
+  loadData();
+  syncPageActionUi();
+
+  // 定期刷新
+  setInterval(() => {
+    loadData();
+    syncPageActionUi();
+  }, 5000);
+});

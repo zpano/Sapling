@@ -3,9 +3,18 @@
   "version": "1.0.0",
   "description": "沉浸式语言学习 Chrome 插件 - 在日常浏览中自然习得语言",
   "scripts": {
-    "build": "node scripts/build.js",
-    "watch": "node scripts/build.js --watch",
-    "mock": "node test/mock-server.js"
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "dev:edge": "wxt -b edge",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "build:edge": "wxt build -b edge",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "zip:edge": "wxt zip -b edge",
+    "postinstall": "wxt prepare",
+    "mock": "node test/mock-server.js",
+    "test:e2e": "playwright test"
   },
   "keywords": [
     "chrome-extension",
@@ -20,6 +29,10 @@
     "segmentit": "^2.0.3"
   },
   "devDependencies": {
-    "esbuild": "^0.24.0"
+    "@playwright/test": "^1.49.1",
+    "@types/chrome": "^0.1.32",
+    "esbuild": "^0.24.0",
+    "vite": "^5.4.11",
+    "wxt": "^0.20.13"
   }
 }

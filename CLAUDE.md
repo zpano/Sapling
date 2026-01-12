@@ -1,151 +1,147 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件提供在本仓库内进行开发/重构时的约定与定位入口（面向代码助手与维护者）。
 
 ## Project Overview
 
-Sapling is a Chrome Extension (Manifest V3) for immersive language learning. It intelligently replaces vocabulary in web pages with translations, allowing users to naturally acquire languages through "Comprehensible Input" (Stephen Krashen's theory).
+Sapling 是一个 Manifest V3 浏览器扩展，用于沉浸式语言学习：在网页中将部分词汇替换为翻译，并提供 tooltip/发音/词汇管理等能力。
 
 ## Build Commands
 
 ```bash
-# Generate extension icons (the only build step)
+# 安装依赖（会触发 postinstall: wxt prepare）
+npm install
+
+# 开发（Chrome）
+npm run dev
+
+# 开发（Firefox）
+npm run dev:firefox
+
+# 构建（Chrome）
 npm run build
 
-# Watch mode for icon generation
-npm run watch
+# 构建（Firefox）
+npm run build:firefox
+
+# 打包发布 zip
+npm run zip
+npm run zip:firefox
 ```
 
-**No bundler is used.** The extension uses vanilla JavaScript ES6+ with native ES modules. Development involves direct file edits and manual extension reloading via `chrome://extensions/`.
+本项目已迁移到 **WXT** 框架（Vite 构建 + TS），不再使用 legacy 的 `js/` + 手工 `manifest.json` + `vendor/` 打包流程。
+
+## Dev API 配置（仅 dev）
+
+开发时可用 `.env.development.local` 强制覆盖 content script 运行时使用的 API 配置，避免反复去设置页修改（仅覆盖 `apiEndpoint/apiKey/modelName`，不写入 storage）。
+
+```bash
+cp .env.development.local.example .env.development.local
+```
+
+变量：
+- `VITE_SAPLING_API_ENDPOINT`（非空才覆盖）
+- `VITE_SAPLING_MODEL_NAME`（非空才覆盖）
+- `VITE_SAPLING_API_KEY`（允许为空，若定义则覆盖）
+
+优先级：
+- `?sapling-mock=1` 测试模式 > `.env.development.local` > storage/默认值
 
 ## Testing
 
-No testing framework is configured. Testing is manual through the Chrome extension developer workflow:
-1. Edit files directly
-2. Visit `chrome://extensions/`
-3. Click refresh button on extension card
-4. Test on any web page
+未配置自动化测试；主要依赖手工验证（加载 `.output/*/manifest.json` 到浏览器扩展管理页）。
 
 ## Architecture
 
 ```
-Background Service Worker
-    js/background.js        - Extension lifecycle, context menus, message routing
+WXT 结构（`~` 导入别名指向 `src/`）
 
-Content Script (Main Entry)
-    js/content.js           - Orchestrates DOM processing, translation, user interaction
+入口（`src/entrypoints/`）
+    src/entrypoints/background.ts   - 后台 service worker：安装初始化、右键菜单、消息代理
+    src/entrypoints/content.ts      - content script：DOM 分段/翻译/替换/交互
+    src/entrypoints/popup/*         - popup 页面（HTML + TS）
+    src/entrypoints/options/*       - options 页面（HTML + TS）
+    src/entrypoints/vocab-test/*    - 词汇量测试页（HTML + TS）
 
-Services Layer (js/services/)
-    ├── api-service.js      - LLM API integration (OpenAI-compatible)
-    ├── cache-service.js    - 2000-word LRU cache management
-    ├── content-segmenter.js - DOM traversal, text extraction, fingerprint deduplication
-    └── text-replacer.js    - DOM text replacement via Range API
+共享模块（`src/`）
+    src/services/*                  - API/缓存/分段/替换/音频 等服务
+    src/core/*                      - 配置与 storage 抽象
+    src/constants.ts                - 全局常量（强度/跳过规则/停用词等）
+    src/ui/*                        - tooltip/modal/toast 等 UI
+    src/utils/*                     - 语言检测/文本处理/过滤/TOON 等工具
 
-Core Modules (js/core/)
-    ├── config.js           - Default configuration values
-    └── storage/            - Storage abstraction layer 
-        ├── IStorageAdapter.js      - Storage adapter interface
-        ├── ChromeStorageAdapter.js - Chrome Storage implementation
-        ├── StorageNamespace.js     - Storage namespace (callback + Promise APIs)
-        └── StorageService.js       - Storage service facade (high-level methods)
-
-Config (js/config/)
-    └── constants.js        - CEFR levels, intensity settings, skip tags/classes
-
-Prompts (js/prompts/)
-    └── ai-prompts.js       - AI translation prompt templates
-
-UI Components (js/ui/)
-    ├── toast.js            - Toast notification system
-    ├── tooltip.js          - Hover tooltip for translated words
-    ├── pronunciation.js    - Pronunciation audio sources (Wiktionary / Youdao)
-    └── wiktionary.js       - Wiktionary dictionary lookup
-
-Utilities (js/utils/)
-    ├── language-detector.js - Language detection with segmentit
-    ├── text-processor.js    - Text processing utilities
-    └── word-filters.js      - Word filtering (CEFR, code detection, proper nouns)
-
-Vendor (vendor/)
-    └── segmentit.bundle.js  - Chinese text segmentation library
-
-UI Pages
-    ├── popup.js/html/css   - Extension popup (stats, quick actions)
-    └── options.js/html/css - Settings page (6-section navigation)
-
-Styles (css/)
-    ├── content.css         - Content script styles (tooltips, highlights)
-    ├── options.css         - Options page styles
-    └── popup.css           - Popup styles
+静态资源（`public/`）
+    public/_locales/*               - i18n 资源
+    public/css/*                    - options/popup 等页面样式
+    public/icons/*                  - 图标
+    public/wordlist/*               - CEFR 词表
 ```
 
 ## Key Technical Details
 
-- **Chrome Extension APIs**: storage (sync + local), contextMenus, activeTab, scripting, tts
-- **ES6 Modules**: Content script uses native ES modules with import/export
-- **Storage Architecture**: Layered abstraction (IStorageAdapter → ChromeStorageAdapter → StorageNamespace → StorageService)
-  - `storage.remote` (Chrome Storage Sync): Config data with DEFAULT_CONFIG merging, cross-device sync
-  - `storage.local` (Chrome Storage Local): Large data (word cache, learned words, memorize list)
-- **Message passing**: Background ↔ Content script via `chrome.runtime.sendMessage()`
-- **Pronunciation audio**: Can play audio via Wiktionary, Youdao (`https://dict.youdao.com/dictvoice?audio={word}&type={1/2}`; English only), or Google Translate TTS (`https://translate.google.com/translate_tts?ie=UTF-8&q={text}&tl={lang}&client=tw-ob`), routed through an offscreen document to bypass page CSP (Wiktionary File: links are converted to `Special:FilePath` without extra API lookups)
-- **Chinese segmentation**: Uses segmentit library for Chinese word boundary detection
+- **WXT + Vite**：构建与入口发现由 WXT 管理；`wxt.config.ts` 生成 manifest。
+- **TypeScript**：以“能跑”为目标（未开启严格模式），逐步补类型。
+- **导入别名**：统一使用 `~/...`，对应 `src/`（见 `wxt.config.ts` 的 `srcDir`）。
+- **存储分层**：`IStorageAdapter -> ChromeStorageAdapter -> StorageNamespace -> StorageService`；区分 sync/local。
+- **消息通信**：background ↔ content 通过 `chrome.runtime.sendMessage` / `tabs.sendMessage`。
+- **发音**：通过 background 代理 fetch + Web Audio 解码播放，绕过页面 CSP。
 
 ## Core Algorithms
 
-**Difficulty Filtering**: Uses CEFR 6-level system (A1 → C2). Words are shown only if >= user's level.
+**难度过滤**：CEFR 6 级（A1 → C2），只选择/显示难度 >= 用户设置的词。
 
-**Replacement Intensity**: Low (4 words/paragraph), Medium (8), High (14).
+**替换强度**：低/中/高（每段落 4/8/14）。
 
-**Content Processing**: 50-2000 character segments, fingerprint deduplication, viewport-aware prioritization, concurrent 3-segment processing.
+**内容处理**：分段（50-2000 字符）、指纹去重、视口优先、并发批处理。
 
-**LRU Cache**: 2000-word capacity, evicts least-recently-used, persists across sessions.
+**LRU 缓存**：默认 2000 容量，按最近使用淘汰，跨会话持久化。
 
-**Translation Styles**:
+**翻译展示样式**：
 - `translation-only`: Show only translation
 - `original-translation`: Original(Translation)
 - `translation-original`: Translation(Original)
 
 ## Supported Languages
 
-- **Native**: Chinese (Simplified/Traditional), English, Japanese, Korean
-- **Target**: English, Chinese, Japanese, Korean, French, German, Spanish
-- **AI Providers**: OpenAI, DeepSeek, Moonshot, Groq, Ollama (any OpenAI-compatible API)
+- **母语**：中文（简/繁）、英语、日语、韩语
+- **目标语言**：英语、中文、日语、韩语、法语、德语、西语
+- **AI Provider**：任意 OpenAI 兼容接口（OpenAI/DeepSeek/Moonshot/Groq/Ollama）
 
 ## Localization
 
-Uses Chrome Extension i18n API. Messages in `/_locales/{locale}/messages.json`. Default locale: zh_CN.
+使用扩展 i18n：`public/_locales/{locale}/messages.json`，默认 `zh_CN`。
 
 ## Storage Architecture Deep Dive
 
-The storage system uses a 4-layer architecture for flexibility and future extensibility:
+存储系统为 4 层结构，便于替换后端与保持兼容：
 
 ### Layer 1: IStorageAdapter (Interface)
-- Abstract interface defining storage operations: `get()`, `set()`, `remove()`, `onChanged()`
-- Enables swapping backends (Chrome Storage → WebDAV → any storage system)
+- 定义 `get/set/remove/onChanged` 契约
+- 允许未来替换后端（Chrome Storage/WebDAV/其他）
 
 ### Layer 2: ChromeStorageAdapter (Implementation)
-- Concrete implementation wrapping `chrome.storage.sync` and `chrome.storage.local`
-- Filters change events by storage area
-- Provides `onChanged()` that returns unsubscribe function
+- 包装 `chrome.storage.sync` / `chrome.storage.local`
+- 过滤 area 的 change 事件
+- `onChanged()` 返回 unsubscribe
 
 ### Layer 3: StorageNamespace (Low-level API)
-- Provides both callback-style and Promise-style APIs (`get/getAsync`, `set/setAsync`, etc.)
-- Handles DEFAULT_CONFIG merging for remote storage (keeps defaults in code, not storage)
-- One namespace per storage area: `storage.remote` (sync), `storage.local` (local)
+- 同时提供 callback / Promise 风格（`get/getAsync`、`set/setAsync`）
+- remote（sync）读取时合并 `DEFAULT_CONFIG`（默认值在代码中）
+- `storage.remote`（sync）与 `storage.local`（local）分离
 
 ### Layer 4: StorageService (High-level Facade)
-- Domain-specific methods: `getWhitelist()`, `addToWhitelist()`, `updateStats()`, etc.
-- Backward-compatible methods: `get()`, `set()`, `getLocal()`, `setLocal()`, `removeLocal()`
-- Exported as singleton: `export const storage = new StorageService()`
+- 提供领域方法：统计/词表/列表等
+- 保持兼容：`get/set/getLocal/setLocal/removeLocal`
+- 单例导出：`export const storage = new StorageService()`
 
 ## Key Files for Common Tasks
 
 | Task | Files |
 |------|-------|
-| Modify translation logic | `js/services/api-service.js`, `js/prompts/ai-prompts.js` |
-| Change DOM processing | `js/services/content-segmenter.js`, `js/services/text-replacer.js` |
-| Update tooltip behavior | `js/ui/tooltip.js`, `css/content.css` |
-| Modify word filtering | `js/utils/word-filters.js`, `js/config/constants.js` |
-| Change storage behavior | `js/core/storage/StorageService.js`, `js/core/storage/ChromeStorageAdapter.js` |
-| Add new storage backend | Create new adapter implementing `js/core/storage/IStorageAdapter.js` |
-| Update popup/options UI | `js/popup.js`, `js/options.js`, corresponding HTML/CSS |
+| 修改翻译逻辑 | `src/services/api-service.ts`, `src/prompts/ai-prompts.ts` |
+| 修改 DOM 处理 | `src/services/content-segmenter.ts`, `src/services/text-replacer.ts` |
+| 修改 tooltip 行为 | `src/ui/tooltip.ts`, `src/ui/content.css` |
+| 修改单词过滤规则 | `src/utils/word-filters.ts`, `src/constants.ts` |
+| 修改存储行为 | `src/core/storage/StorageService.ts`, `src/core/storage/ChromeStorageAdapter.ts` |
+| 添加新存储后端 | 实现 `src/core/storage/IStorageAdapter.ts` |
+| 修改 popup/options UI | `src/entrypoints/popup/*`, `src/entrypoints/options/*` |

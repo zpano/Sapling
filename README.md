@@ -328,10 +328,12 @@ Sapling/
 │   │   └── messages.json
 │   └── zh_CN/
 │       └── messages.json
-├── css/                    # 样式文件
-│   ├── content.css         # 注入页面的样式
+├── public/css/             # 页面样式文件
 │   ├── options.css         # 设置页面样式
-│   └── popup.css           # 弹出窗口样式
+│   ├── popup.css           # 弹出窗口样式
+│   ├── theme.css           # 主题变量
+│   └── ui-controls.css     # 通用控件样式
+├── src/ui/content.css # content script 注入样式（高亮/下划线/tooltip）
 ├── dist/                   # 构建产物（content script bundle）
 │   ├── content.js
 │   └── content.js.map

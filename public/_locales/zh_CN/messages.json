@@ -1,0 +1,214 @@
+{
+  "extensionName": {
+    "message": "Sapling - 沉浸式语言学习",
+    "description": "扩展名称"
+  },
+  "extensionDescription": {
+    "message": "在日常浏览中自然习得语言，智能替换网页词汇，创造沉浸式双语学习环境",
+    "description": "扩展描述"
+  },
+  "commandToggleTranslation": {
+    "message": "切换处理/还原当前页面",
+    "description": "快捷键描述"
+  },
+  "popupTitle": {
+    "message": "Sapling",
+    "description": "弹出窗口标题"
+  },
+  "statsTitle": {
+    "message": "学习统计",
+    "description": "统计标题"
+  },
+  "totalWords": {
+    "message": "累计接触",
+    "description": "累计接触词汇数"
+  },
+  "todayWords": {
+    "message": "今日接触",
+    "description": "今日接触词汇数"
+  },
+  "learnedWords": {
+    "message": "已学会",
+    "description": "已学会词汇数"
+  },
+  "memorizeWords": {
+    "message": "需记忆",
+    "description": "需记忆词汇数"
+  },
+  "cachedWords": {
+    "message": "已缓存",
+    "description": "已缓存词汇数"
+  },
+  "cacheHitRate": {
+    "message": "命中率",
+    "description": "缓存命中率"
+  },
+  "processPage": {
+    "message": "处理当前页面",
+    "description": "处理页面按钮"
+  },
+  "openSettings": {
+    "message": "设置",
+    "description": "打开设置页面"
+  },
+  "enabled": {
+    "message": "已启用",
+    "description": "启用状态"
+  },
+  "disabled": {
+    "message": "已禁用",
+    "description": "禁用状态"
+  },
+  "settingsTitle": {
+    "message": "Sapling 设置",
+    "description": "设置页面标题"
+  },
+  "apiSettings": {
+    "message": "API 配置",
+    "description": "API设置标题"
+  },
+  "apiEndpoint": {
+    "message": "API 端点",
+    "description": "API端点输入"
+  },
+  "apiKey": {
+    "message": "API 密钥",
+    "description": "API密钥输入"
+  },
+  "modelName": {
+    "message": "模型名称",
+    "description": "模型名称输入"
+  },
+  "testConnection": {
+    "message": "测试连接",
+    "description": "测试API连接按钮"
+  },
+  "connectionSuccess": {
+    "message": "连接成功！",
+    "description": "连接成功消息"
+  },
+  "connectionFailed": {
+    "message": "连接失败",
+    "description": "连接失败消息"
+  },
+  "learningPreferences": {
+    "message": "学习偏好",
+    "description": "学习偏好标题"
+  },
+  "nativeLanguage": {
+    "message": "母语语言",
+    "description": "母语选择"
+  },
+  "targetLanguage": {
+    "message": "学习语言",
+    "description": "学习语言选择"
+  },
+  "difficultyLevel": {
+    "message": "难度等级",
+    "description": "难度等级选择"
+  },
+  "replacementIntensity": {
+    "message": "替换强度",
+    "description": "替换强度选择"
+  },
+  "intensityLow": {
+    "message": "较少",
+    "description": "低强度"
+  },
+  "intensityMedium": {
+    "message": "适中",
+    "description": "中强度"
+  },
+  "intensityHigh": {
+    "message": "较多",
+    "description": "高强度"
+  },
+  "behaviorSettings": {
+    "message": "行为设置",
+    "description": "行为设置标题"
+  },
+  "autoProcess": {
+    "message": "自动处理新页面",
+    "description": "自动处理开关"
+  },
+  "showPhonetic": {
+    "message": "显示音标",
+    "description": "音标显示开关"
+  },
+  "siteRules": {
+    "message": "站点规则",
+    "description": "站点规则标题"
+  },
+  "blacklist": {
+    "message": "黑名单（永不处理）",
+    "description": "黑名单"
+  },
+  "whitelist": {
+    "message": "白名单（始终处理）",
+    "description": "白名单"
+  },
+  "saveSettings": {
+    "message": "保存设置",
+    "description": "保存按钮"
+  },
+  "settingsSaved": {
+    "message": "设置已保存",
+    "description": "保存成功消息"
+  },
+  "clearCache": {
+    "message": "清空缓存",
+    "description": "清空缓存按钮"
+  },
+  "cacheCleared": {
+    "message": "缓存已清空",
+    "description": "清空成功消息"
+  },
+  "learnedList": {
+    "message": "已学会列表",
+    "description": "已学会词汇列表"
+  },
+  "memorizeList": {
+    "message": "需记忆列表",
+    "description": "需记忆词汇列表"
+  },
+  "markAsLearned": {
+    "message": "标记为已学会",
+    "description": "标记已学会"
+  },
+  "addToMemorize": {
+    "message": "添加到需记忆",
+    "description": "添加到需记忆"
+  },
+  "clickToSpeak": {
+    "message": "左键点击发音",
+    "description": "发音提示"
+  },
+  "rightClickToLearn": {
+    "message": "右键标记已学会",
+    "description": "标记提示"
+  },
+  "presets": {
+    "message": "预设服务",
+    "description": "预设服务选择"
+  },
+  "apiKeyNotConfigured": {
+    "message": "API Key 未配置，请前往设置页面配置",
+    "description": "Sapling: API Key 未配置错误提示"
+  },
+  "apiEndpointNotConfigured": {
+    "message": "API 端点未配置，请前往设置页面配置",
+    "description": "Sapling: API 端点未配置错误提示"
+  },
+  "apiRequestFailed": {
+    "message": "API 请求失败",
+    "description": "Sapling: API 请求失败错误提示"
+  },
+  "vocabTestTitle": {
+    "message": "词汇量测试",
+    "description": "词汇量测试页面标题"
+  },
+  "retestVocab": {
+    "message": "重新测试词汇量",
+    "description": "重新测试词汇量按钮"
+  }
+}

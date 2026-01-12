@@ -2,9 +2,9 @@ name: Nightly Build
 
 on:
   schedule:
-    # 每天 UTC 0:00 运行 (北京时间 8:00)
+    # Runs daily at 00:00 UTC
     - cron: '0 0 * * *'
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch: # Allow manual trigger
 
 permissions:
   contents: write
@@ -19,18 +19,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for commits today
+      - name: Check for new commits
         id: check
         run: |
-          # 获取过去24小时内的提交数量
-          COMMITS_TODAY=$(git log --since="24 hours ago" --oneline | wc -l)
-          echo "commits_count=$COMMITS_TODAY" >> $GITHUB_OUTPUT
+          # Count commits in the last 24 hours
+          COMMITS_TODAY="$(git log --since="24 hours ago" --oneline | wc -l | tr -d ' ')"
+          echo "commits_count=$COMMITS_TODAY" >> "$GITHUB_OUTPUT"
+
           if [ "$COMMITS_TODAY" -eq 0 ]; then
-            echo "No commits in the last 24 hours, skipping build"
-            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "No commits in the last 24 hours; skipping build."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Found $COMMITS_TODAY commits in the last 24 hours"
-            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "Found $COMMITS_TODAY commits in the last 24 hours; starting build."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Setup Node.js
@@ -41,46 +42,44 @@ jobs:
 
       - name: Install dependencies
         if: steps.check.outputs.should_build == 'true'
-        run: npm install
+        run: npm ci
 
-      - name: Build extension
-        if: steps.check.outputs.should_build == 'true'
-        run: npm run build
-
-      - name: Get version and commit info
+      - name: Collect version and commit info
         if: steps.check.outputs.should_build == 'true'
         id: info
         run: |
-          echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-          echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-          echo "date_compact=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+          echo "version=$(node -p 'require(\"./package.json\").version')" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+          echo "date_compact=$(date -u +'%Y%m%d')" >> "$GITHUB_OUTPUT"
 
-          # 根据触发方式生成不同的 tag 和标题
+          # Generate different tag/title by trigger type
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TIME_SUFFIX="-$(date +'%H%M%S')"
-            echo "tag_suffix=$TIME_SUFFIX" >> $GITHUB_OUTPUT
-            echo "build_type=Manual Build" >> $GITHUB_OUTPUT
-            echo "datetime=$(date +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+            TIME_SUFFIX="-$(date -u +'%H%M%S')"
+            echo "tag_suffix=$TIME_SUFFIX" >> "$GITHUB_OUTPUT"
+            echo "build_type=Manual Build" >> "$GITHUB_OUTPUT"
+            echo "datetime=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_OUTPUT"
           else
-            echo "tag_suffix=" >> $GITHUB_OUTPUT
-            echo "build_type=Nightly Build" >> $GITHUB_OUTPUT
-            echo "datetime=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+            echo "tag_suffix=" >> "$GITHUB_OUTPUT"
+            echo "build_type=Nightly Build" >> "$GITHUB_OUTPUT"
+            echo "datetime=$(date -u +'%Y-%m-%d UTC')" >> "$GITHUB_OUTPUT"
           fi
 
-          # 获取过去24小时内的提交信息
-          echo "commits<<EOF" >> $GITHUB_OUTPUT
-          git log --since="24 hours ago" --pretty=format:"- %s (%h)" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Capture commit messages from the last 24 hours
+          echo "commits<<EOF" >> "$GITHUB_OUTPUT"
+          git log --since="24 hours ago" --pretty=format:"- %s (%h)" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
-      - name: Create release package
+      - name: Build release artifacts
         if: steps.check.outputs.should_build == 'true'
         run: |
           chmod +x scripts/package.sh
-          ./scripts/package.sh "Sapling-nightly-${{ steps.info.outputs.date_compact }}${{ steps.info.outputs.tag_suffix }}.zip"
+          ./scripts/package.sh --browser chrome --output "Sapling-nightly-chrome-${{ steps.info.outputs.date_compact }}${{ steps.info.outputs.tag_suffix }}.zip"
+          ./scripts/package.sh --browser firefox --output "Sapling-nightly-firefox-${{ steps.info.outputs.date_compact }}${{ steps.info.outputs.tag_suffix }}.zip"
+          ./scripts/package.sh --browser edge --output "Sapling-nightly-edge-${{ steps.info.outputs.date_compact }}${{ steps.info.outputs.tag_suffix }}.zip"
 
-      - name: Create Nightly Release
+      - name: Create nightly release
         if: steps.check.outputs.should_build == 'true'
         uses: softprops/action-gh-release@v1
         with:
@@ -89,21 +88,18 @@ jobs:
           body: |
             **${{ steps.info.outputs.build_type }}** - ${{ steps.info.outputs.datetime }}
             **Version:** ${{ steps.info.outputs.version }}
-            **Latest Commit:** ${{ steps.info.outputs.short_sha }}
+            **Latest commit:** ${{ steps.info.outputs.short_sha }}
 
             ## Changes in the last 24 hours
             ${{ steps.info.outputs.commits }}
 
-            ## Installation
-            1. Download `Sapling-nightly-${{ steps.info.outputs.date_compact }}${{ steps.info.outputs.tag_suffix }}.zip`
-            2. Unzip the file
-            3. Open Chrome and go to `chrome://extensions/`
-            4. Enable "Developer mode"
-            5. Click "Load unpacked extension"
-            6. Select the unzipped folder
+            ## Installation (Developer Mode)
+            - Chrome: Download `Sapling-nightly-chrome-${{ steps.info.outputs.date_compact }}${{ steps.info.outputs.tag_suffix }}.zip`, unzip, then load unpacked at `chrome://extensions/`
+            - Edge: Download `Sapling-nightly-edge-${{ steps.info.outputs.date_compact }}${{ steps.info.outputs.tag_suffix }}.zip`, unzip, then load unpacked at `edge://extensions/`
+            - Firefox: Download `Sapling-nightly-firefox-${{ steps.info.outputs.date_compact }}${{ steps.info.outputs.tag_suffix }}.zip`, unzip, then temporarily load `manifest.json` at `about:debugging#/runtime/this-firefox`
 
             ---
-            ⚠️ This is an automated nightly build and may be unstable.
+            WARNING: Automated nightly build; may be unstable.
           files: release/*.zip
           prerelease: true
           draft: false
