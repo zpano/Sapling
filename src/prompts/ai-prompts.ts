@@ -100,6 +100,8 @@ export function buildBatchVocabularySelectionPrompt({
 
   // 从第一个段落判断学习方向（同一批次应已按语言分组）
   const firstPara = paragraphs[0];
+  const sourceLang = firstPara.sourceLang;
+  const targetLang = firstPara.targetLang;
   const isLearningFromSource = firstPara.sourceLang === learningLanguage;
   const learningWordField = isLearningFromSource ? 'original' : 'translation';
 
@@ -109,6 +111,8 @@ export function buildBatchVocabularySelectionPrompt({
 For EACH paragraph provided, select ${aiTargetCount}-${aiMaxCount} words with high learning value.
 
 ## Translation Context:
+- Source language: ${sourceLang}
+- Target language: ${targetLang}
 - User's native language: ${nativeLanguage}
 - User's learning language: ${learningLanguage}
 - **The word user is learning will be in the "${learningWordField}" field**
@@ -121,6 +125,7 @@ For EACH paragraph provided, select ${aiTargetCount}-${aiMaxCount} words with hi
 5. Translation style: context-aware, single best meaning (not multiple definitions)
 6. **CRITICAL PHONETIC RULE**: The "phonetic" field MUST be the pronunciation of the "${learningWordField}" field (the ${learningLanguage} word), NOT the other field!
 7. **CRITICAL DIFFICULTY RULE**: User's current CEFR level is **${userDifficultyLevel}**. ONLY select words with difficulty level **${userDifficultyLevel} or higher** (i.e., ${userDifficultyLevel}${getHigherLevelsHint(userDifficultyLevel)}). Do NOT include words easier than ${userDifficultyLevel}${getEasierLevelsHint(userDifficultyLevel)}.
+8. **CRITICAL TRANSLATION LANGUAGE RULE**: The "translation" field MUST be in ${targetLang}.
 
 ${getCommonSections(nativeLanguage, learningLanguage, isLearningFromSource)}
 

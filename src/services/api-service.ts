@@ -12,6 +12,18 @@ import { segmentText, reconstructTextWithWords, filterWords } from '~/utils/text
 import { decodeContent } from '~/utils/toon-codec';
 import type { SaplingConfig } from '~/types/config';
 
+function normalizeTextValue(value: unknown) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function isInvalidTranslationPair(original: unknown, translation: unknown, sourceLang: string, targetLang: string) {
+  if (sourceLang && targetLang && sourceLang === targetLang) return false;
+  const originalText = normalizeTextValue(original);
+  const translationText = normalizeTextValue(translation);
+  if (!originalText || !translationText) return true;
+  return originalText === translationText;
+}
+
 /**
  * API 服务类
  */
@@ -283,20 +295,27 @@ class ApiService {
       const cached = [];
       const uncached = [];
       const cachedWordsSet = new Set();
+      let cachePruned = false;
 
       for (const word of allWords) {
         const key = `${word.toLowerCase()}:${sourceLang}:${targetLang}`;
-        if (cacheMap.has(key)) {
+        const cachedItem = cacheMap.get(key);
+        if (cachedItem) {
+          if (isInvalidTranslationPair(word, cachedItem.translation, sourceLang, targetLang)) {
+            cacheMap.delete(key);
+            cachePruned = true;
+            uncached.push(word);
+            continue;
+          }
           const lowerWord = word.toLowerCase();
           if (!cachedWordsSet.has(lowerWord)) {
-            cached.push({ word, ...cacheMap.get(key) });
+            cached.push({ word, ...cachedItem });
             cachedWordsSet.add(lowerWord);
           }
         } else {
           uncached.push(word);
         }
       }
-
       // 额外检查：检查文本中是否包含已缓存的中文词汇
       const lowerText = text.toLowerCase();
       for (const [key, value] of cacheMap) {
@@ -305,6 +324,11 @@ class ApiService {
           cachedTargetLang === targetLang &&
           /[\u4e00-\u9fff]/.test(cachedWord) &&
           cachedWord.length >= 2) {
+          if (isInvalidTranslationPair(cachedWord, value.translation, sourceLang, targetLang)) {
+            cacheMap.delete(key);
+            cachePruned = true;
+            continue;
+          }
           const lowerCachedWord = cachedWord.toLowerCase();
           if (!cachedWordsSet.has(lowerCachedWord)) {
             if (lowerText.includes(lowerCachedWord)) {
@@ -320,12 +344,20 @@ class ApiService {
           }
         }
       }
+      if (cachePruned) {
+        try {
+          saveCacheCallback();
+        } catch {
+          // ignore
+        }
+      }
 
       // 过滤缓存结果（按难度）
       const filteredCached = cached
         .filter(c => {
           const word = c.word || '';
           if (isNonLearningWord(word)) return false;
+          if (isInvalidTranslationPair(word, c.translation, sourceLang, targetLang)) return false;
 
           const isChinese = /[\u4e00-\u9fff]/.test(word);
           if (isChinese && word.length < 2) return false;
@@ -528,6 +560,7 @@ class ApiService {
             // 缓存词汇
             for (const item of words) {
               const word = item.original || '';
+              if (isInvalidTranslationPair(word, item.translation, para.sourceLang, para.targetLang)) continue;
               if (isNonLearningWord(word)) continue;
 
               const isChinese = /[\u4e00-\u9fff]/.test(word);
@@ -560,6 +593,7 @@ class ApiService {
             // 过滤词汇
             const filteredWords = words.filter(item => {
               const word = item.original || '';
+              if (isInvalidTranslationPair(word, item.translation, para.sourceLang, para.targetLang)) return false;
               if (isNonLearningWord(word)) return false;
 
               const difficulty = normalizeCefrLevel(item.difficulty) || 'A1';
@@ -724,18 +758,32 @@ class ApiService {
 
     const uncached = [];
     const cached = [];
+    let cachePruned = false;
 
     // 检查缓存
     for (const word of normalizedTargetWords) {
       const key = `${word.toLowerCase()}:${sourceLang}:${targetLang}`;
-      if (cacheMap.has(key)) {
+      const cachedItem = cacheMap.get(key);
+      if (cachedItem) {
+        if (isInvalidTranslationPair(word, cachedItem.translation, sourceLang, targetLang)) {
+          cacheMap.delete(key);
+          cachePruned = true;
+          uncached.push(word);
+          continue;
+        }
         // LRU: 访问时移到末尾
-        const cachedItem = cacheMap.get(key);
         cacheMap.delete(key);
         cacheMap.set(key, cachedItem);
         cached.push({ word, ...cachedItem });
       } else {
         uncached.push(word);
+      }
+    }
+    if (cachePruned) {
+      try {
+        saveCacheCallback();
+      } catch {
+        // ignore
       }
     }
 
@@ -748,7 +796,7 @@ class ApiService {
       shortDefinition: c.shortDefinition || '',
       example: c.example || '',
       sourceLang
-    }));
+    })).filter(item => !isInvalidTranslationPair(item.original, item.translation, sourceLang, targetLang));
 
     // 如果有未缓存的单词，调用 API
     if (uncached.length > 0) {
@@ -863,7 +911,8 @@ class ApiService {
               translation
             };
           })
-          .filter(item => item && typeof item.original === 'string' && item.original && typeof item.translation === 'string' && item.translation);
+          .filter(item => item && typeof item.original === 'string' && item.original && typeof item.translation === 'string' && item.translation)
+          .filter(item => !isInvalidTranslationPair(item.original, item.translation, sourceLang, targetLang));
 
         // 缓存结果
         for (const item of normalizedApiResults) {
@@ -926,6 +975,7 @@ class ApiService {
     return allResults.filter(item =>
       typeof item?.original === 'string' &&
       typeof item?.translation === 'string' &&
+      !isInvalidTranslationPair(item.original, item.translation, sourceLang, targetLang) &&
       normalizedTargetWords.some(w => w.toLowerCase() === item.original.toLowerCase()) &&
       !isNonLearningWord(item.original)
     );
