@@ -42,7 +42,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.check.outputs.should_build == 'true'
-        run: npm ci
+        run: npm install
 
       - name: Collect version and commit info
         if: steps.check.outputs.should_build == 'true'
