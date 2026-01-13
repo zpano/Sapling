@@ -209,6 +209,7 @@ type WordCacheValue = Omit<WordCacheItem, 'key'>;
 let config: ContentConfig | null = null;
 let isProcessing = false;
 let isPageActivated = false;  // 跟踪页面是否已被激活处理（手动或自动）
+let isPaused = false;         // 当前页面是否处于暂停处理状态
 const WORD_CACHE_STORAGE_KEY = 'Sapling_word_cache' as const;
 let wordCache = new Map<string, WordCacheValue>();
 const tooltipManager = new TooltipManager();
@@ -255,6 +256,23 @@ function isHostnameBlacklisted(hostname: unknown, blacklistList: unknown): boole
   const normalizedHost = String(hostname || '').toLowerCase();
   const normalizedList = normalizeBlacklist(blacklistList);
   return normalizedList.some(domain => normalizedHost === domain || normalizedHost.endsWith('.' + domain));
+}
+
+function pauseProcessing(showToastMessage = true): void {
+  if (isPaused) return;
+  isPaused = true;
+  isPageActivated = false;
+  if (showToastMessage) {
+    showToast('Sapling: 已暂停本页处理');
+  }
+}
+
+function resumeProcessing(showToastMessage = true): void {
+  const wasPaused = isPaused;
+  isPaused = false;
+  if (showToastMessage && wasPaused) {
+    showToast('Sapling: 已恢复处理');
+  }
 }
 
 // ============ 配置加载 ============
@@ -645,7 +663,7 @@ async function addToMemorizeList(word: string): Promise<void> {
       }
     });
 
-    if (!config.enabled) {
+    if (!config.enabled || isPaused) {
       showToast(`Sapling: "${trimmedWord}" 已添加到记忆列表`);
       return;
     }
@@ -868,6 +886,9 @@ async function translateSpecificWords(targetWords: string[]): Promise<Replacemen
 }
 
 async function processSpecificWords(targetWords: string[]): Promise<number> {
+  if (isPaused) {
+    return 0;
+  }
   if (!config?.enabled || !targetWords?.length) {
     return 0;
   }
@@ -1041,6 +1062,7 @@ async function processSpecificWords(targetWords: string[]): Promise<number> {
 }
 
 async function processPage(viewportOnly = false): Promise<{ processed: number; skipped?: boolean; disabled?: boolean; blacklisted?: boolean; errors?: number }> {
+  if (isPaused) return { processed: 0, skipped: true };
   if (isProcessing) return { processed: 0, skipped: true };
   if (!config?.enabled) return { processed: 0, disabled: true };
 
@@ -1292,6 +1314,7 @@ function setupMessageListener(): void {
   chrome.runtime.onMessage.addListener((message: ContentRequest, sender, sendResponse: (response: unknown) => void) => {
     console.log('[Sapling] Received message:', message);
     if (message.action === 'processPage') {
+      resumeProcessing(true);
       if (isHostnameBlacklisted(window.location.hostname, config?.blacklistNormalized ?? config?.blacklist ?? [])) {
         console.log('[Sapling] Ignoring processPage request for blacklisted site');
         sendResponse({ processed: 0, blacklisted: true } satisfies ProcessPageResponse);
@@ -1303,11 +1326,16 @@ function setupMessageListener(): void {
       return true;
     }
     if (message.action === 'restorePage') {
+      pauseProcessing(true);
       restoreAll();
       sendResponse({ success: true } satisfies RestorePageResponse);
     }
     if (message.action === 'processSpecificWords') {
       const words = Array.isArray(message.words) ? message.words.filter((w): w is string => typeof w === 'string') : [];
+      if (isPaused) {
+        sendResponse({ success: true, count: 0 } satisfies ProcessSpecificWordsResponse);
+        return true;
+      }
       if (words.length > 0) {
         processSpecificWords(words).then(count => {
           sendResponse({ success: true, count } satisfies ProcessSpecificWordsResponse);
@@ -1454,6 +1482,7 @@ function setupEventListeners(): void {
 
   // 滚动处理
   const handleScroll = debounce(() => {
+    if (isPaused) return;
     if (isHostnameBlacklisted(window.location.hostname, config?.blacklistNormalized ?? config?.blacklist ?? [])) return;
     // 当页面已激活（手动触发过）或开启了自动处理时，滚动继续处理
     if ((isPageActivated || config?.autoProcess) && config?.enabled) {
@@ -1490,10 +1519,11 @@ function setupEventListeners(): void {
 
         if (changes.enabled?.newValue === false) {
           restoreAll();
+          pauseProcessing(false);
         }
         if (changes.difficultyLevel || changes.intensity || changes.translationStyle || changes.processFullPage) {
           restoreAll();
-          if (config.enabled) {
+          if (config.enabled && !isPaused) {
             const viewportOnly = !config.processFullPage;
             void processPage(viewportOnly);
           }
@@ -1516,7 +1546,7 @@ function setupEventListeners(): void {
             .filter(w => !oldWords.has(w.word.toLowerCase()))
             .map(w => w.word);
 
-          if (newWords.length > 0 && config.enabled) {
+          if (newWords.length > 0 && config.enabled && !isPaused) {
             setTimeout(() => {
               void processSpecificWords(newWords);
             }, 200);
@@ -1581,7 +1611,7 @@ async function init(): Promise<void> {
     void flushWordCacheSave();
   }, { capture: true });
 
-  if (config?.autoProcess && config.enabled && config.apiKey) {
+  if (config?.autoProcess && config.enabled && config.apiKey && !isPaused) {
     isPageActivated = true;  // 自动处理时也激活状态
     const viewportOnly = !config.processFullPage;
     setTimeout(() => void processPage(viewportOnly), 1000);
