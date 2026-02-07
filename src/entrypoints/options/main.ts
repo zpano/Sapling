@@ -22,6 +22,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   const DEFAULT_API_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
   const DEFAULT_MODEL_NAME = 'gpt-4o-mini';
 
+  // API 预设配置
+  const API_PRESETS = {
+    openai: {
+      name: 'OpenAI',
+      endpoint: 'https://api.openai.com/v1/chat/completions',
+      model: 'gpt-4o-mini'
+    },
+    gemini: {
+      name: 'Gemini',
+      endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      model: 'gemini-2.5-flash-lite'
+    }
+  };
+
   function generateApiProfileId() {
     return `api_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
   }
@@ -1248,6 +1262,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (elements.deleteApiProfileBtn) {
       elements.deleteApiProfileBtn.addEventListener('click', () => deleteApiProfile());
     }
+
+    // API 预设按钮
+    document.querySelectorAll('.api-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const presetKey = btn.dataset.preset;
+        const preset = API_PRESETS[presetKey];
+        if (preset) {
+          elements.apiEndpoint.value = preset.endpoint;
+          elements.modelName.value = preset.model;
+          // 更新预设按钮活动状态
+          document.querySelectorAll('.api-preset-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          // 触发自动保存
+          debouncedSave();
+        }
+      });
+    });
 
     // 切换 API 密钥可见性
     elements.toggleApiKey.addEventListener('click', () => {

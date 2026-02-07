@@ -102,6 +102,15 @@
         </div>
 
         <div class="form-group">
+          <label>API 预设</label>
+          <div class="api-preset-buttons" id="apiPresetButtons">
+            <button type="button" class="preset-btn api-preset-btn" data-preset="openai">OpenAI</button>
+            <button type="button" class="preset-btn api-preset-btn" data-preset="gemini">Gemini</button>
+          </div>
+          <p class="help-text">点击预设自动填充 API 端点和模型名称，仅需补充 API Key</p>
+        </div>
+
+        <div class="form-group">
           <label for="apiEndpoint">API 端点</label>
           <input type="url" id="apiEndpoint" placeholder="https://api.example.com/v1/chat/completions">
         </div>

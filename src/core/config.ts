@@ -35,6 +35,11 @@ export const API_PRESETS = {
     name: 'OpenAI',
     endpoint: 'https://api.openai.com/v1/chat/completions',
     model: 'gpt-4o-mini'
+  },
+  gemini: {
+    name: 'Gemini',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    model: 'gemini-2.5-flash'
   }
 };
 
@@ -55,13 +60,13 @@ export const DEFAULT_CONFIG: SaplingConfig = {
   modelName: API_PRESETS.openai.model,
   apiProfiles: [],
   activeApiProfileId: null,
-  
+
   // 学习偏好
   nativeLanguage: 'zh-CN',
   targetLanguage: 'en',
   difficultyLevel: 'B1',
   intensity: 'medium',
-  
+
   // 行为设置
   autoProcess: false,
   showPhonetic: true,
@@ -70,16 +75,16 @@ export const DEFAULT_CONFIG: SaplingConfig = {
   pronunciationProvider: 'google',
   youdaoPronunciationType: 2,
   enabled: true,
-  
+
   // 站点规则
   blacklist: [],
   whitelist: [],
-  
+
   // 统计数据
   totalWords: 0,
   todayWords: 0,
   lastResetDate: new Date().toISOString().split('T')[0],
-  
+
   // 缓存设置
   cacheMaxSize: 2048,
 
